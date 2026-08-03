@@ -1,0 +1,574 @@
+{
+	"info": {
+		"_postman_id": "studymate-api-collection-v1",
+		"name": "StudyMate API Testing Suite",
+		"description": "Bộ Test Case API đầy đủ cho StudyMate Backend (Auth, Subject, Schedule, Task, Note, Document, AI Gemini, Dashboard)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/api",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "subjectId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "noteId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "taskId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "quizId",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "01. Authentication",
+			"item": [
+				{
+					"name": "1.1 Đăng ký tài khoản (Register)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user_test@gmail.com\",\n  \"password\": \"123456\",\n  \"fullName\": \"Học Sinh Demo\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "register"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success) {",
+									"    pm.collectionVariables.set('token', jsonData.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+									"    console.log('AccessToken saved!');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "1.2 Đăng nhập (Login)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user_test@gmail.com\",\n  \"password\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success) {",
+									"    pm.collectionVariables.set('token', jsonData.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+									"    console.log('AccessToken saved from Login!');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "1.3 Kiểm tra Token (Me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "me"]
+						}
+					}
+				},
+				{
+					"name": "1.4 Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "refresh"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "02. Subject API",
+			"item": [
+				{
+					"name": "2.1 Tạo môn học mới",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Lập Trình Web nâng cao\",\n  \"color\": \"#3B82F6\",\n  \"type\": \"SCHOOL\",\n  \"classCode\": \"INT1332\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/subjects",
+							"host": ["{{baseUrl}}"],
+							"path": ["subjects"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success) {",
+									"    pm.collectionVariables.set('subjectId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "2.2 Lấy danh sách môn học",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/subjects",
+							"host": ["{{baseUrl}}"],
+							"path": ["subjects"]
+						}
+					}
+				},
+				{
+					"name": "2.3 Chi tiết môn học",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/subjects/{{subjectId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["subjects", "{{subjectId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "03. Schedule API",
+			"item": [
+				{
+					"name": "3.1 Thêm lịch học",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subjectId\": {{subjectId}},\n  \"dayOfWeek\": \"THU_2\",\n  \"shift\": \"SANG\",\n  \"periods\": \"1-3\",\n  \"startTime\": \"07:00:00\",\n  \"endTime\": \"09:30:00\",\n  \"isOnline\": false,\n  \"isRecurring\": true,\n  \"teacherName\": \"TS. Nguyễn Văn A\",\n  \"room\": \"A2-301\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/schedule/manual",
+							"host": ["{{baseUrl}}"],
+							"path": ["schedule", "manual"]
+						}
+					}
+				},
+				{
+					"name": "3.2 Lịch học hôm nay",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/schedule/today",
+							"host": ["{{baseUrl}}"],
+							"path": ["schedule", "today"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "04. Task API",
+			"item": [
+				{
+					"name": "4.1 Tạo công việc mới",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subjectId\": {{subjectId}},\n  \"title\": \"Làm bài tập Spring Security JWT\",\n  \"description\": \"Tích hợp JWT và OAuth2 cho backend\",\n  \"deadline\": \"2026-08-05T23:59:00\",\n  \"status\": \"TODO\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tasks",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success) {",
+									"    pm.collectionVariables.set('taskId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "4.2 Đổi trạng thái task (Done)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{taskId}}/status?status=DONE",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{taskId}}", "status"],
+							"query": [
+								{
+									"key": "status",
+									"value": "DONE"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "05. Note API",
+			"item": [
+				{
+					"name": "5.1 Tạo ghi chú mới",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subjectId\": {{subjectId}},\n  \"title\": \"Kiến trúc Spring Boot 3.x\",\n  \"content\": \"Spring Boot 3 sử dụng Jakarta EE 10 và Java 17+. Lớp Controller xử lý HTTP request, Service xử lý business logic, và Repository tương tác với cơ sở dữ liệu qua JPA Hibernate.\",\n  \"importanceLevel\": \"IMPORTANT\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/notes",
+							"host": ["{{baseUrl}}"],
+							"path": ["notes"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success) {",
+									"    pm.collectionVariables.set('noteId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "5.2 Lấy danh sách ghi chú",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes",
+							"host": ["{{baseUrl}}"],
+							"path": ["notes"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "06. AI Integration (Gemini)",
+			"item": [
+				{
+					"name": "6.1 AI Tóm tắt Ghi chú",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes/{{noteId}}/summarize",
+							"host": ["{{baseUrl}}"],
+							"path": ["notes", "{{noteId}}", "summarize"]
+						}
+					}
+				},
+				{
+					"name": "6.2 AI Sinh bộ Quiz trắc nghiệm",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes/{{noteId}}/quiz?numberOfQuestions=3",
+							"host": ["{{baseUrl}}"],
+							"path": ["notes", "{{noteId}}", "quiz"],
+							"query": [
+								{
+									"key": "numberOfQuestions",
+									"value": "3"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.success) {",
+									"    pm.collectionVariables.set('quizId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "6.3 AI Sinh cây Mindmap",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/notes/{{noteId}}/mindmap",
+							"host": ["{{baseUrl}}"],
+							"path": ["notes", "{{noteId}}", "mindmap"]
+						}
+					}
+				},
+				{
+					"name": "6.4 Nộp bài Quiz & Chấm điểm",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"answers\": {\n    \"1\": \"A\",\n    \"2\": \"B\",\n    \"3\": \"C\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/quizzes/{{quizId}}/attempt",
+							"host": ["{{baseUrl}}"],
+							"path": ["quizzes", "{{quizId}}", "attempt"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "07. Dashboard & Stats",
+			"item": [
+				{
+					"name": "7.1 Dashboard Hôm nay",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/dashboard/today",
+							"host": ["{{baseUrl}}"],
+							"path": ["dashboard", "today"]
+						}
+					}
+				},
+				{
+					"name": "7.2 Dashboard Tuần này",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/dashboard/week",
+							"host": ["{{baseUrl}}"],
+							"path": ["dashboard", "week"]
+						}
+					}
+				},
+				{
+					"name": "7.3 Báo cáo Thống kê Tuần",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/stats/weekly",
+							"host": ["{{baseUrl}}"],
+							"path": ["stats", "weekly"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
