@@ -35,6 +35,11 @@ public class SecurityConfig {
 
     // ── Endpoints không cần auth ───────────────────────────
     private static final String[] PUBLIC_ENDPOINTS = {
+            "/",
+            "/index.html",
+            "/assets/**",
+            "/uploads/**",
+            "/favicon.ico",
             "/api/auth/**",
             "/actuator/health",
             "/v3/api-docs/**",

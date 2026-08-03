@@ -47,6 +47,17 @@ public class AuthController {
     }
 
     /**
+     * POST /api/auth/oauth2
+     * Body: { provider: "GOOGLE"|"FACEBOOK", email, fullName, avatarUrl }
+     */
+    @PostMapping("/oauth2")
+    public ResponseEntity<ApiResponse<AuthResponse>> oauth2Login(
+            @Valid @RequestBody com.huyberos.studymate.dto.request.OAuthLoginRequest request) {
+        AuthResponse response = authService.oauth2Login(request);
+        return ResponseEntity.ok(ApiResponse.ok("OAuth login successful", response));
+    }
+
+    /**
      * POST /api/auth/refresh
      * Body: { refreshToken }
      */
@@ -79,6 +90,16 @@ public class AuthController {
     }
 
     // ── Me endpoint (test auth) ────────────────────────────
+
+    /**
+     * PUT /api/auth/profile — Cập nhật thông tin cá nhân (họ tên, avatar, mật khẩu)
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<AuthResponse>> updateProfile(
+            @Valid @RequestBody com.huyberos.studymate.dto.request.UserProfileRequest request) {
+        AuthResponse response = authService.updateProfile(securityUtil.getCurrentUserId(), request);
+        return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully", response));
+    }
 
     /**
      * GET /api/auth/me — kiểm tra token còn valid không

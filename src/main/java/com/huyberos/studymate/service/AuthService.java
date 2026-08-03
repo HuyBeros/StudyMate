@@ -13,6 +13,7 @@ import com.huyberos.studymate.repository.RefreshTokenRepository;
 import com.huyberos.studymate.repository.UserRepository;
 import com.huyberos.studymate.security.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -102,6 +104,58 @@ public class AuthService {
     @Transactional
     public void logoutAll(Long userId) {
         refreshTokenRepository.revokeAllByUserId(userId);
+    }
+
+    @Transactional
+    public AuthResponse oauth2Login(com.huyberos.studymate.dto.request.OAuthLoginRequest request) {
+        String email = request.getEmail().toLowerCase().trim();
+        log.info("[OAuth2 Login] provider={} email={}", request.getProvider(), email);
+
+        try {
+            User user = userRepository.findByEmail(email).orElseGet(() -> {
+                AuthProvider provider = "FACEBOOK".equalsIgnoreCase(request.getProvider())
+                        ? AuthProvider.FACEBOOK
+                        : AuthProvider.GOOGLE;
+
+                log.info("[OAuth2 Login] Creating new user: email={}, provider={}", email, provider);
+                User newUser = User.builder()
+                        .email(email)
+                        .passwordHash("")
+                        .fullName(request.getFullName() != null ? request.getFullName() : email.split("@")[0])
+                        .avatarUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : "")
+                        .provider(provider)
+                        .build();
+                return userRepository.save(newUser);
+            });
+
+            log.info("[OAuth2 Login] Success userId={}", user.getId());
+            return buildAuthResponse(user);
+
+        } catch (Exception e) {
+            log.error("[OAuth2 Login] FAILED for email={}: {}", email, e.getMessage(), e);
+            throw new RuntimeException("OAuth2 login failed: " + e.getMessage(), e);
+        }
+    }
+
+    @Transactional
+    public AuthResponse updateProfile(Long userId, com.huyberos.studymate.dto.request.UserProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName().trim());
+        }
+
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl().trim());
+        }
+
+        if (request.getNewPassword() != null && !request.getNewPassword().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword().trim()));
+        }
+
+        User updated = userRepository.save(user);
+        return buildAuthResponse(updated);
     }
 
     // ── Helper ────────────────────────────────────────────
