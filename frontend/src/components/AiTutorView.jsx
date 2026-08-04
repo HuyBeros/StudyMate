@@ -61,7 +61,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
             <Bot className="w-4 h-4" /> AI Tutor Workspace
           </div>
 
-          <h2 className="font-['Outfit'] font-extrabold text-3xl sm:text-4xl leading-tight">
+          <h2 className="font-['Be_Vietnam_Pro'] font-extrabold text-3xl sm:text-4xl leading-tight">
             Xin chào, Scholar! 🪄
           </h2>
 
@@ -72,7 +72,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
           <div className="pt-2">
             <button 
               onClick={() => onOpenQuizModal()}
-              className="bg-white hover:bg-blue-50 text-blue-600 font-bold text-sm py-3 px-6 rounded-2xl shadow-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="bg-white hover:bg-blue-50 text-blue-600 font-['Inter'] font-bold text-sm py-3 px-6 rounded-2xl shadow-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
               <span>Khám phá tính năng mới</span>
@@ -94,7 +94,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
               <HelpCircle className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 Tạo AI Quiz
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
@@ -120,7 +120,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
               <Network className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 Vẽ Mindmap
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
@@ -146,7 +146,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
               <FileText className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 Tóm tắt tài liệu
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
@@ -182,7 +182,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
           </div>
 
           <div>
-            <h4 className="font-['Outfit'] font-bold text-slate-900 dark:text-white text-lg">
+            <h4 className="font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white text-lg">
               Tải tài liệu mới
             </h4>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
@@ -191,7 +191,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
           </div>
 
           <div>
-            <label className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3 px-6 rounded-2xl shadow-md shadow-blue-500/25 cursor-pointer transition-all hover:scale-105 active:scale-95">
+            <label className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-['Inter'] font-bold text-sm py-3 px-6 rounded-2xl shadow-md shadow-blue-500/25 cursor-pointer transition-all hover:scale-105 active:scale-95">
               <span>Chọn từ máy tính</span>
               <input 
                 type="file" 
@@ -214,7 +214,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
       {/* 4. Recent Processed History List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white">
+          <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
             Đã xử lý gần đây
           </h3>
           <button className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
@@ -233,7 +233,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
                   <FileCode2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h4 className="font-['Outfit'] font-bold text-slate-900 dark:text-white text-sm">
+                  <h4 className="font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white text-sm">
                     {item.title}
                   </h4>
                   <p className="text-slate-400 dark:text-slate-400 text-xs font-medium">

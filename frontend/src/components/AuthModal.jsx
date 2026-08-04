@@ -132,7 +132,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
                 {isLoginMode ? 'Đăng nhập EduFlow' : 'Đăng ký tài khoản'}
               </h3>
               <p className="text-xs text-slate-400">StudyMate · Học thông minh hơn mỗi ngày</p>

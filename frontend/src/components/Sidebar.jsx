@@ -29,7 +29,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
             <GraduationCap className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+            <h1 className="font-['Space_Grotesk'] font-bold text-xl text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
               EduFlow
             </h1>
             <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full inline-block">
@@ -47,7 +47,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl font-medium text-sm transition-all duration-200 ${
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl font-['Inter'] font-medium text-sm transition-all duration-200 ${
                   isActive
                     ? 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
@@ -73,7 +73,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
         {/* + New Study Session Action Button */}
         <button
           onClick={onOpenNewSession}
-          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm py-3.5 px-4 rounded-2xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-['Inter'] font-semibold text-sm py-3.5 px-4 rounded-2xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
         >
           <Plus className="w-5 h-5" />
           <span>New Study Session</span>
@@ -83,14 +83,14 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-1">
           <button 
             onClick={() => setActiveTab('settings')}
-            className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-['Inter'] text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
           >
             <Settings className="w-4 h-4" />
             <span>Settings</span>
           </button>
           <button 
             onClick={() => setActiveTab('help')}
-            className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-['Inter'] text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
           >
             <HelpCircle className="w-4 h-4" />
             <span>Help</span>

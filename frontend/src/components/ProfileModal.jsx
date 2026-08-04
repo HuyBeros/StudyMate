@@ -60,7 +60,7 @@ export default function ProfileModal({ isOpen, onClose, user, onUpdateUser }) {
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-slate-100">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-slate-100">
                 Thông tin cá nhân
               </h3>
               <p className="text-xs text-slate-400 font-medium">Xem và chỉnh sửa hồ sơ người dùng</p>

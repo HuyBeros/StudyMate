@@ -4,12 +4,16 @@
 
 @layer base {
   :root {
-    --font-heading: 'Outfit', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    /* Font roles per design spec */
+    --font-logo: 'Space Grotesk', sans-serif;       /* Logo "EduFlow" – w700 */
+    --font-heading: 'Be Vietnam Pro', sans-serif;   /* Headings lớn – w700-800 */
+    --font-body: 'Be Vietnam Pro', sans-serif;      /* Body / label nhỏ – w400-500 */
+    --font-ui: 'Inter', sans-serif;                /* Nav, badge, button, input */
+    --font-stat: 'Manrope', sans-serif;            /* Số liệu lớn (75%, 4.5h) – w700-800 */
   }
   
   body {
-    font-family: var(--font-body);
+    font-family: var(--font-ui);
     background-color: #F8FAFC;
     color: #0F172A;
     overflow-x: hidden;
@@ -23,6 +27,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+    font-weight: 700;
   }
 }
 

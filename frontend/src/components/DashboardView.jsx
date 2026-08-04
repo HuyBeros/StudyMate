@@ -22,10 +22,10 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       {/* 1. Greeting Header */}
       <div className="space-y-1">
-        <h2 className="font-['Outfit'] font-bold text-3xl text-slate-900 dark:text-white flex items-center gap-2">
+        <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white flex items-center gap-2">
           Chào buổi sáng, {data.user?.fullName || 'Minh Anh'}! <span className="animate-bounce inline-block">👋</span>
         </h2>
-        <p className="text-slate-500 dark:text-slate-400 font-medium text-base">
+        <p className="text-slate-500 dark:text-slate-400 font-['Be_Vietnam_Pro'] font-medium text-base">
           Bạn đã hoàn thành {data.user?.dailyGoalPercent || 75}% mục tiêu ngày hôm nay. Tiếp tục nhé!
         </p>
       </div>
@@ -62,7 +62,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="font-['Outfit'] font-extrabold text-4xl text-slate-900 dark:text-white">
+                <span className="font-['Manrope'] font-extrabold text-4xl text-slate-900 dark:text-white">
                   {data.user?.dailyGoalPercent || 75}%
                 </span>
                 <span className="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wider mt-0.5">
@@ -78,27 +78,27 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
                 <span>Tiến độ tốt hơn hôm qua 15%</span>
               </div>
 
-              <h3 className="font-['Outfit'] font-bold text-2xl text-slate-900 dark:text-white leading-snug">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-2xl text-slate-900 dark:text-white leading-snug">
                 Tiến độ học tập hàng ngày
               </h3>
 
-              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 font-['Be_Vietnam_Pro'] text-sm leading-relaxed">
                 Bạn đã dành <strong className="text-slate-800 dark:text-slate-200 font-semibold">{data.user?.hoursStudied || 4.5} giờ</strong> để học tập trong hôm nay. Mục tiêu của bạn là {data.user?.goalHours || 6.0} giờ.
               </p>
 
               {/* Sub-stats Grid */}
               <div className="grid grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div>
-                  <span className="text-xs text-slate-400 font-medium block">Bài tập</span>
-                  <span className="font-['Outfit'] font-bold text-lg text-slate-900 dark:text-white">12/15</span>
+                  <span className="text-xs text-slate-400 font-['Be_Vietnam_Pro'] font-medium block">Bài tập</span>
+                  <span className="font-['Manrope'] font-bold text-lg text-slate-900 dark:text-white">12/15</span>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-medium block">Ghi chú</span>
-                  <span className="font-['Outfit'] font-bold text-lg text-slate-900 dark:text-white">8</span>
+                  <span className="text-xs text-slate-400 font-['Be_Vietnam_Pro'] font-medium block">Ghi chú</span>
+                  <span className="font-['Manrope'] font-bold text-lg text-slate-900 dark:text-white">8</span>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-medium block">Streak</span>
-                  <span className="font-['Outfit'] font-bold text-lg text-slate-900 dark:text-white flex items-center justify-center md:justify-start gap-1">
+                  <span className="text-xs text-slate-400 font-['Be_Vietnam_Pro'] font-medium block">Streak</span>
+                  <span className="font-['Manrope'] font-bold text-lg text-slate-900 dark:text-white flex items-center justify-center md:justify-start gap-1">
                     ⚡ {data.user?.streak || 14} ngày
                   </span>
                 </div>
@@ -120,7 +120,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
               </div>
 
               <div>
-                <h4 className="font-['Outfit'] font-bold text-2xl leading-tight">
+                <h4 className="font-['Be_Vietnam_Pro'] font-bold text-2xl leading-tight">
                   Toán học: Giải tích
                 </h4>
                 <p className="text-blue-100 text-xs font-medium mt-1 flex items-center gap-1.5">
@@ -130,7 +130,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
 
               <button 
                 onClick={() => onNavigate('schedule')}
-                className="w-full bg-white hover:bg-blue-50 text-blue-600 dark:text-blue-600 font-bold text-sm py-3 px-5 rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full bg-white hover:bg-blue-50 text-blue-600 dark:text-blue-600 font-['Inter'] font-bold text-sm py-3 px-5 rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Play className="w-4 h-4 fill-current" />
                 <span>Bắt đầu ngay</span>
@@ -141,7 +141,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
           {/* Tasks Container */}
           <div className="bg-white dark:bg-[#111C32] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs flex-1 flex flex-col justify-between transition-colors">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white">
+              <h4 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
                 Nhiệm vụ
               </h4>
               <button className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-600 dark:text-blue-400 flex items-center justify-center transition-colors">
@@ -175,7 +175,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
                       {task.title}
                     </p>
                     <span 
-                      className="inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-md"
+                      className="inline-block px-2.5 py-0.5 text-[10px] font-['Inter'] font-bold rounded-md"
                       style={{ backgroundColor: `${task.subjectColor}20`, color: task.subjectColor }}
                     >
                       {task.subject}
@@ -218,7 +218,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-['Outfit'] font-bold text-2xl text-slate-900 dark:text-white">
+            <h3 className="font-['Be_Vietnam_Pro'] font-bold text-2xl text-slate-900 dark:text-white">
               Môn học của bạn
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
@@ -251,7 +251,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
                 <div className="absolute bottom-3 left-4 text-white">
-                  <span className="font-['Outfit'] font-bold text-lg leading-tight block">
+                  <span className="font-['Be_Vietnam_Pro'] font-bold text-lg leading-tight block">
                     {sub.name}
                   </span>
                 </div>
@@ -260,7 +260,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
               {/* Card Content */}
               <div className="p-5 space-y-4">
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-semibold">
+                  <div className="flex justify-between text-xs font-['Inter'] font-semibold">
                     <span className="text-slate-500 dark:text-slate-400">Đã hoàn thành</span>
                     <span className="text-slate-900 dark:text-white font-bold">{sub.progress}%</span>
                   </div>
@@ -289,7 +289,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
             <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
               <Plus className="w-7 h-7" />
             </div>
-            <span className="font-['Outfit'] font-bold text-slate-800 dark:text-slate-200 text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <span className="font-['Be_Vietnam_Pro'] font-bold text-slate-800 dark:text-slate-200 text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               Thêm môn học mới
             </span>
           </div>

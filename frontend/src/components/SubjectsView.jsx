@@ -34,24 +34,24 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
       {/* 1. Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h2 className="font-['Outfit'] font-bold text-3xl text-slate-900 dark:text-white">
+          <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white">
             Môn học của tôi
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm max-w-2xl leading-relaxed">
+          <p className="text-slate-500 dark:text-slate-400 font-['Be_Vietnam_Pro'] font-medium text-sm max-w-2xl leading-relaxed">
             Quản lý các môn học đang theo dõi, tiến độ học tập và tài liệu liên quan để tối ưu hóa thời gian của bạn.
           </p>
         </div>
 
         {/* Action Buttons matching screenshot 2 */}
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111C32] hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-sm text-slate-700 dark:text-slate-200 shadow-2xs transition-all">
+          <button className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111C32] hover:bg-slate-50 dark:hover:bg-slate-800 font-['Inter'] font-bold text-sm text-slate-700 dark:text-slate-200 shadow-2xs transition-all">
             <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
             <span>Lọc</span>
           </button>
           
           <button 
             onClick={onOpenNewSubject}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-['Inter'] font-bold text-sm shadow-md shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Plus className="w-5 h-5" />
             <span>Thêm môn học</span>
@@ -77,7 +77,7 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
             <button
               key={type}
               onClick={() => setSelectedType(type)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl font-['Inter'] text-xs font-bold transition-all ${
                 selectedType === type
                   ? 'bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -118,7 +118,7 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
 
                 {/* Title & Description */}
                 <div className="space-y-1.5">
-                  <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {subject.name}
                   </h3>
                   <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed line-clamp-2">
@@ -131,8 +131,8 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
               <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-500 dark:text-slate-400">Tiến độ hoàn thành</span>
-                    <span className="text-blue-600 dark:text-blue-400 font-bold">{subject.progress}%</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-['Inter']">Tiến độ hoàn thành</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-['Manrope'] font-bold">{subject.progress}%</span>
                   </div>
                   <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div 
@@ -165,7 +165,7 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
           <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-xs">
             <Plus className="w-8 h-8" />
           </div>
-          <h4 className="font-['Outfit'] font-bold text-slate-900 dark:text-white text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          <h4 className="font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             Thêm môn học mới
           </h4>
           <p className="text-slate-400 text-xs font-medium mt-1 max-w-xs">

@@ -70,7 +70,7 @@ export function QuizModal({ isOpen, onClose }) {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
                 AI Quiz: Trắc nghiệm Giải tích
               </h3>
               <p className="text-xs text-slate-400 font-medium">
@@ -87,7 +87,7 @@ export function QuizModal({ isOpen, onClose }) {
         <div className="space-y-6">
           {questions.map((q, idx) => (
             <div key={q.id} className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-[#172136] border border-slate-200/60 dark:border-slate-800">
-              <h4 className="font-['Outfit'] font-bold text-sm text-slate-900 dark:text-white">
+              <h4 className="font-['Be_Vietnam_Pro'] font-bold text-sm text-slate-900 dark:text-white">
                 Câu {idx + 1}: {q.text}
               </h4>
 
@@ -130,7 +130,7 @@ export function QuizModal({ isOpen, onClose }) {
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           {submitted ? (
             <div className="flex items-center gap-3">
-              <span className="font-['Outfit'] font-extrabold text-2xl text-blue-600 dark:text-blue-400">
+              <span className="font-['Manrope'] font-extrabold text-2xl text-blue-600 dark:text-blue-400">
                 {calculateScore()} / {questions.length} điểm
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -200,7 +200,7 @@ Nên ôn kỹ lại bài tập trang 45 trước kỳ thi giữa kỳ!
               <Brain className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
                 AI Summary: {title}
               </h3>
               <p className="text-xs text-slate-400 font-medium">Tóm tắt ý chính tự động bởi Gemini 2.0 Flash</p>
@@ -248,7 +248,7 @@ export function MindmapModal({ isOpen, onClose }) {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
                 AI Mindmap: Sơ đồ tư duy môn Giải tích
               </h3>
               <p className="text-xs text-slate-400 font-medium">Cấu trúc cây tự động được vẽ bởi AI</p>
@@ -342,7 +342,7 @@ export function CreateSubjectModal({ isOpen, onClose, onAddSubject }) {
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-          <h3 className="font-['Outfit'] font-bold text-xl text-slate-900 dark:text-white">
+          <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
             Thêm môn học mới
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300">

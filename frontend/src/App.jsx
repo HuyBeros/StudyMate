@@ -197,20 +197,31 @@ export default function App() {
 
           {activeTab === 'schedule' && (
             <ScheduleView 
-              schedule={schedule.length > 0 ? schedule.map(s => ({
+              schedule={schedule.map(s => ({
                 id: s.id,
                 subjectName: s.subjectName,
-                time: `${s.startTime || '08:00'} - ${s.endTime || '09:30'}`,
-                room: s.room || "Phòng B.204",
-                teacher: s.teacherName || "TS. Nguyễn Văn A",
-                bgColor: "bg-blue-50/80 border-blue-200 text-blue-900"
-              })) : [
-                { id: 1, subjectName: "Giải tích 1", time: "08:00 - 09:30", room: "Phòng B.204", teacher: "TS. Nguyễn Văn A", bgColor: "bg-blue-50/80 border-blue-200 text-blue-900" },
-                { id: 2, subjectName: "Kinh tế học vĩ mô", time: "10:00 - 11:30", room: "Giảng đường A1", teacher: "ThS. Lê Thị B", bgColor: "bg-sky-50/80 border-sky-200 text-sky-900" }
-              ]} 
-              tasks={tasks.length > 0 ? tasks : [
-                { id: 1, title: "Làm bài tập Giải tích chương 3", deadlineTime: "14:00", completed: false, priority: "LƯU TIÊN CAO", priorityClass: "bg-red-50 text-red-600" }
-              ]}
+                date: s.date,          // ISO date string từ backend
+                time: s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : undefined,
+                startTime: s.startTime,
+                endTime: s.endTime,
+                room: s.room,
+                teacher: s.teacherName,
+                iconType: s.iconType,
+              }))}
+              tasks={tasks.map(t => ({
+                id: t.id,
+                title: t.title,
+                status: t.status,
+                completed: t.status === 'DONE',
+                subjectName: t.subjectName,
+                priority: t.priority,
+                priorityClass: t.priority === 'HIGH'
+                  ? 'bg-red-50 dark:bg-red-950/60 text-red-600'
+                  : t.priority === 'MEDIUM'
+                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600'
+                  : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600',
+                deadlineTime: t.deadlineTime,
+              }))}
               onOpenNewSession={() => setIsCreateSubjectOpen(true)}
               onOpenAiTutor={() => setActiveTab('ai-tutor')}
             />
@@ -242,7 +253,7 @@ export default function App() {
                       className="w-24 h-24 rounded-full object-cover ring-4 ring-blue-500/20"
                     />
                     <div>
-                      <h2 className="font-['Outfit'] font-bold text-3xl text-slate-900 dark:text-white">{user?.fullName || 'Minh Anh'}</h2>
+                      <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white">{user?.fullName || 'Minh Anh'}</h2>
                       <p className="text-blue-600 dark:text-blue-400 font-semibold text-sm">{user?.email || user?.role || 'Premium Student'}</p>
                       <p className="text-slate-400 dark:text-slate-400 text-xs mt-1">Học sinh tích cực với {user?.streak || 14} ngày streak liên tiếp ⚡</p>
                     </div>
