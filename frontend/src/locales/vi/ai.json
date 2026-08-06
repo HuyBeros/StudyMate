@@ -1,0 +1,21 @@
+{
+  "heroGreeting": "Xin chào, Scholar! 🪄",
+  "heroDesc": "Chào mừng bạn quay lại không gian làm việc AI. Hãy để trí tuệ nhân tạo hỗ trợ bạn tối ưu hóa việc học tập ngay hôm nay.",
+  "exploreBtn": "Khám phá tính năng mới",
+
+  "quiz_title": "Tạo AI Quiz",
+  "quiz_desc": "Chuyển đổi bất kỳ tài liệu nào thành bộ câu hỏi ôn tập thông minh chỉ trong vài giây.",
+  "mindmap_title": "Vẽ Mindmap",
+  "mindmap_desc": "Tự động hóa sơ đồ tư duy từ nội dung bài giảng để ghi nhớ kiến thức tốt hơn.",
+  "summary_title": "Tóm tắt tài liệu",
+  "summary_desc": "Nắm bắt ý chính của các tài liệu dài hàng trăm trang chỉ với một cú nhấp chuột.",
+
+  "uploadTitle": "Tải tài liệu mới",
+  "uploadDesc": "Kéo và thả PDF, Word, hoặc hình ảnh vào đây để AI bắt đầu xử lý. Hỗ trợ tối đa 50MB mỗi tệp.",
+  "uploadBtn": "Chọn từ máy tính",
+  "processing": "AI đang trích xuất và phân tích tài liệu...",
+
+  "recentHistory": "Đã xử lý gần đây",
+  "viewAll": "Xem tất cả",
+  "viewResult": "Xem kết quả"
+}

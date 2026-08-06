@@ -1,0 +1,55 @@
+{
+  "appName": "EduFlow",
+  "tagline": "Học thông minh hơn mỗi ngày",
+
+  "nav": {
+    "dashboard": "Bảng điều khiển",
+    "subjects": "Môn học",
+    "schedule": "Lịch học",
+    "aiTutor": "AI Trợ lý",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "help": "Trợ giúp",
+    "newSession": "Phiên học mới"
+  },
+
+  "header": {
+    "searchPlaceholder": "Tìm kiếm tài liệu, bài giảng...",
+    "darkMode": "Chế độ tối (Dark Mode)",
+    "profile": "Thông tin cá nhân",
+    "logout": "Đăng xuất",
+    "language": "Ngôn ngữ",
+    "notLoggedIn": "Bạn chưa đăng nhập",
+    "login": "Đăng nhập"
+  },
+
+  "language": {
+    "title": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+
+  "button": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "add": "Thêm",
+    "back": "Quay lại",
+    "viewAll": "Xem tất cả",
+    "addNew": "+ Thêm mới"
+  },
+
+  "empty": {
+    "noData": "Chưa có dữ liệu"
+  },
+
+  "time": {
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "hoursAgo": "{{count}} giờ trước",
+    "minutesAgo": "{{count}} phút trước"
+  }
+}

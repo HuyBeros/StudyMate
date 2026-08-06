@@ -70,6 +70,48 @@ public class GeminiClient {
         }
     }
 
+    /**
+     * Gọi Gemini 2.0 Flash với prompt kèm theo dữ liệu hình ảnh (inlineData Base64).
+     */
+    public String generateContentWithImage(String prompt, String mimeType, byte[] imageBytes, boolean forceJson) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new BadRequestException("Gemini API key is missing. Please set GEMINI_API_KEY environment variable.");
+        }
+
+        String fullUrl = apiUrl + "?key=" + apiKey;
+
+        String base64Image = java.util.Base64.getEncoder().encodeToString(imageBytes);
+        Map<String, Object> textPart = Map.of("text", prompt);
+        Map<String, Object> imagePart = Map.of("inlineData", Map.of("mimeType", mimeType, "data", base64Image));
+        Map<String, Object> content = Map.of("parts", List.of(textPart, imagePart));
+
+        Map<String, Object> requestBody;
+        if (forceJson) {
+            Map<String, Object> generationConfig = Map.of("response_mime_type", "application/json");
+            requestBody = Map.of(
+                    "contents", List.of(content),
+                    "generationConfig", generationConfig
+            );
+        } else {
+            requestBody = Map.of("contents", List.of(content));
+        }
+
+        try {
+            String rawResponse = restClient.post()
+                    .uri(fullUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(String.class);
+
+            return extractTextFromGeminiResponse(rawResponse);
+
+        } catch (Exception e) {
+            log.error("Failed to call Gemini API with image: {}", e.getMessage(), e);
+            throw new BadRequestException("Error communicating with Gemini AI: " + e.getMessage());
+        }
+    }
+
     private String extractTextFromGeminiResponse(String jsonResponse) {
         try {
             JsonNode root = objectMapper.readTree(jsonResponse);

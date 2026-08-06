@@ -1,0 +1,21 @@
+{
+  "heroGreeting": "Hello, Scholar! 🪄",
+  "heroDesc": "Welcome back to your AI workspace. Let artificial intelligence help you optimize your learning today.",
+  "exploreBtn": "Explore new features",
+
+  "quiz_title": "Create AI Quiz",
+  "quiz_desc": "Convert any document into a smart set of practice questions in just seconds.",
+  "mindmap_title": "Draw Mindmap",
+  "mindmap_desc": "Automatically generate mind maps from lecture content to better retain knowledge.",
+  "summary_title": "Summarize document",
+  "summary_desc": "Grasp the key points of hundreds of pages with just a single click.",
+
+  "uploadTitle": "Upload new document",
+  "uploadDesc": "Drag and drop PDF, Word, or images here for AI to start processing. Supports up to 50MB per file.",
+  "uploadBtn": "Choose from computer",
+  "processing": "AI is extracting and analyzing the document...",
+
+  "recentHistory": "Recently processed",
+  "viewAll": "View all",
+  "viewResult": "View result"
+}

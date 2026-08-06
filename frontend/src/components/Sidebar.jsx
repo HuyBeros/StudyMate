@@ -10,14 +10,17 @@ import {
   HelpCircle,
   GraduationCap
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
+  const { t } = useTranslation('common');
+
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'subjects', label: 'Subjects', icon: BookOpen },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'ai-tutor', label: 'AI Tutor', icon: Sparkles, badge: 'AI' },
-    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+    { id: 'subjects',  labelKey: 'nav.subjects',  icon: BookOpen },
+    { id: 'schedule',  labelKey: 'nav.schedule',  icon: Calendar },
+    { id: 'ai-tutor',  labelKey: 'nav.aiTutor',   icon: Sparkles, badge: 'AI' },
+    { id: 'profile',   labelKey: 'nav.profile',   icon: User },
   ];
 
   return (
@@ -55,7 +58,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
               >
                 <div className="flex items-center gap-3.5">
                   <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </div>
                 {item.badge && (
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-2xs animate-pulse">
@@ -76,7 +79,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
           className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-['Inter'] font-semibold text-sm py-3.5 px-4 rounded-2xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
         >
           <Plus className="w-5 h-5" />
-          <span>New Study Session</span>
+          <span>{t('nav.newSession')}</span>
         </button>
 
         {/* Settings & Help */}
@@ -86,14 +89,14 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
             className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-['Inter'] text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
           >
             <Settings className="w-4 h-4" />
-            <span>Settings</span>
+            <span>{t('nav.settings')}</span>
           </button>
           <button 
             onClick={() => setActiveTab('help')}
             className="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-['Inter'] text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
           >
             <HelpCircle className="w-4 h-4" />
-            <span>Help</span>
+            <span>{t('nav.help')}</span>
           </button>
         </div>
       </div>

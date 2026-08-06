@@ -10,8 +10,10 @@ import {
   Bot,
   Brain
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapModal, onOpenSummaryModal }) {
+  const { t } = useTranslation('ai');
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -62,11 +64,11 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
           </div>
 
           <h2 className="font-['Be_Vietnam_Pro'] font-extrabold text-3xl sm:text-4xl leading-tight">
-            Xin chào, Scholar! 🪄
+            {t('heroGreeting')}
           </h2>
 
           <p className="text-blue-100 text-sm font-medium leading-relaxed">
-            Chào mừng bạn quay lại không gian làm việc AI. Hãy để trí tuệ nhân tạo hỗ trợ bạn tối ưu hóa việc học tập ngay hôm nay.
+            {t('heroDesc')}
           </p>
 
           <div className="pt-2">
@@ -75,16 +77,16 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
               className="bg-white hover:bg-blue-50 text-blue-600 font-['Inter'] font-bold text-sm py-3 px-6 rounded-2xl shadow-md transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Khám phá tính năng mới</span>
+              <span>{t('exploreBtn')}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* 2. 3 Main AI Tool Cards matching Dark Mode (#111C32) */}
+      {/* 2. 3 Main AI Tool Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Card 1: Tạo AI Quiz */}
+        {/* Card 1: AI Quiz */}
         <div
           onClick={() => onOpenQuizModal()}
           className="bg-white dark:bg-[#111C32] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:shadow-lg transition-all duration-300 cursor-pointer group flex flex-col justify-between space-y-6 card-hover-effect"
@@ -95,10 +97,10 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
             </div>
             <div className="space-y-1">
               <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                Tạo AI Quiz
+                {t('quiz_title')}
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                Chuyển đổi bất kỳ tài liệu nào thành bộ câu hỏi ôn tập thông minh chỉ trong vài giây.
+                {t('quiz_desc')}
               </p>
             </div>
           </div>
@@ -110,7 +112,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
           </div>
         </div>
 
-        {/* Card 2: Vẽ Mindmap */}
+        {/* Card 2: Mindmap */}
         <div
           onClick={() => onOpenMindmapModal()}
           className="bg-white dark:bg-[#111C32] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:shadow-lg transition-all duration-300 cursor-pointer group flex flex-col justify-between space-y-6 card-hover-effect"
@@ -121,10 +123,10 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
             </div>
             <div className="space-y-1">
               <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                Vẽ Mindmap
+                {t('mindmap_title')}
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                Tự động hóa sơ đồ tư duy từ nội dung bài giảng để ghi nhớ kiến thức tốt hơn.
+                {t('mindmap_desc')}
               </p>
             </div>
           </div>
@@ -136,9 +138,9 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
           </div>
         </div>
 
-        {/* Card 3: Tóm tắt tài liệu */}
+        {/* Card 3: Summary */}
         <div
-          onClick={() => onOpenSummaryModal("Tài liệu xem trước.pdf")}
+          onClick={() => onOpenSummaryModal("preview.pdf")}
           className="bg-white dark:bg-[#111C32] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:shadow-lg transition-all duration-300 cursor-pointer group flex flex-col justify-between space-y-6 card-hover-effect"
         >
           <div className="space-y-4">
@@ -147,10 +149,10 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
             </div>
             <div className="space-y-1">
               <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                Tóm tắt tài liệu
+                {t('summary_title')}
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                Nắm bắt ý chính của các tài liệu dài hàng trăm trang chỉ với một cú nhấp chuột.
+                {t('summary_desc')}
               </p>
             </div>
           </div>
@@ -164,7 +166,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
 
       </div>
 
-      {/* 3. Drag & Drop Upload Zone (#111C32) */}
+      {/* 3. Drag & Drop Upload Zone */}
       <div 
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -183,16 +185,16 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
 
           <div>
             <h4 className="font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white text-lg">
-              Tải tài liệu mới
+              {t('uploadTitle')}
             </h4>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
-              Kéo và thả PDF, Word, hoặc hình ảnh vào đây để AI bắt đầu xử lý. Hỗ trợ tối đa 50MB mỗi tệp.
+              {t('uploadDesc')}
             </p>
           </div>
 
           <div>
             <label className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-['Inter'] font-bold text-sm py-3 px-6 rounded-2xl shadow-md shadow-blue-500/25 cursor-pointer transition-all hover:scale-105 active:scale-95">
-              <span>Chọn từ máy tính</span>
+              <span>{t('uploadBtn')}</span>
               <input 
                 type="file" 
                 accept=".pdf,.docx,.pptx,.png,.jpg" 
@@ -205,7 +207,7 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
           {isProcessing && (
             <div className="flex items-center justify-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 pt-2 animate-pulse">
               <Brain className="w-4 h-4" />
-              <span>AI đang trích xuất và phân tích tài liệu...</span>
+              <span>{t('processing')}</span>
             </div>
           )}
         </div>
@@ -215,44 +217,58 @@ export default function AiTutorView({ history, onOpenQuizModal, onOpenMindmapMod
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
-            Đã xử lý gần đây
+            {t('recentHistory')}
           </h3>
-          <button className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
-            Xem tất cả
-          </button>
+          {history.length > 0 && (
+            <button className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">
+              {t('viewAll')}
+            </button>
+          )}
         </div>
 
-        <div className="space-y-3">
-          {history.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white dark:bg-[#111C32] rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#172136] flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
-                  <FileCode2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        {history.length === 0 ? (
+          <div className="bg-white dark:bg-[#111C32] rounded-2xl p-8 border border-slate-200/80 dark:border-slate-800/80 text-center space-y-2">
+            <Bot className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+              Chưa có tài liệu nào được xử lý
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Tải tài liệu lên hoặc dùng các tính năng AI phía trên để bắt đầu!
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {history.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white dark:bg-[#111C32] rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#172136] flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
+                    <FileCode2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white text-sm">
+                      {item.title}
+                    </h4>
+                    <p className="text-slate-400 dark:text-slate-400 text-xs font-medium">
+                      {item.action} • {item.timeAgo}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white text-sm">
-                    {item.title}
-                  </h4>
-                  <p className="text-slate-400 dark:text-slate-400 text-xs font-medium">
-                    {item.action} • {item.timeAgo}
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => onOpenSummaryModal(item.title)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#172136] hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs transition-colors"
-                >
-                  Xem kết quả
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => onOpenSummaryModal(item.title)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#172136] hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-xs transition-colors"
+                  >
+                    {t('viewResult')}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>

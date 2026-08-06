@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
 import { loginApi, registerApi, oauth2LoginApi } from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 const GOOGLE_CLIENT_ID = "809610594828-lvdaejskin02qevhhsgi5c8j5ps3css6.apps.googleusercontent.com";
 
 export default function AuthModal({ isOpen, onClose, onSuccess }) {
+  const { t } = useTranslation('auth');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
@@ -19,7 +21,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     setErrorMessage('');
 
     if (!window.google?.accounts?.oauth2) {
-      setErrorMessage('Google Sign-In chưa được tải. Vui lòng reload trang và thử lại.');
+      setErrorMessage(t('error.googleNotLoaded'));
       return;
     }
 
@@ -57,11 +59,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             onSuccess(res.data);
             onClose();
           } else {
-            setErrorMessage(res?.message || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+            setErrorMessage(res?.message || t('error.googleFailed'));
           }
         } catch (err) {
           console.error('[Google Login Error]:', err);
-          setErrorMessage('Đã xảy ra lỗi khi kết nối với máy chủ.');
+          setErrorMessage(t('error.serverError2'));
         } finally {
           setLoading(false);
         }
@@ -86,10 +88,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         onSuccess(res.data);
         onClose();
       } else {
-        setErrorMessage(res?.message || 'Đăng nhập Facebook thất bại.');
+        setErrorMessage(res?.message || t('error.facebookFailed'));
       }
     } catch {
-      setErrorMessage('Không thể kết nối đến máy chủ.');
+      setErrorMessage(t('error.serverError'));
     } finally {
       setLoading(false);
     }
@@ -109,10 +111,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         onSuccess(res.data);
         onClose();
       } else {
-        setErrorMessage(res?.message || 'Đăng nhập/Đăng ký thất bại. Kiểm tra lại thông tin.');
+        setErrorMessage(res?.message || t('error.loginFailed'));
       }
     } catch {
-      setErrorMessage('Không thể kết nối đến máy chủ.');
+      setErrorMessage(t('error.serverError'));
     } finally {
       setLoading(false);
     }
@@ -133,9 +135,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             </div>
             <div>
               <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
-                {isLoginMode ? 'Đăng nhập EduFlow' : 'Đăng ký tài khoản'}
+                {isLoginMode ? t('title') : t('titleRegister')}
               </h3>
-              <p className="text-xs text-slate-400">StudyMate · Học thông minh hơn mỗi ngày</p>
+              <p className="text-xs text-slate-400">{t('subtitle')}</p>
             </div>
           </div>
           <button
@@ -157,7 +159,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             className="w-full bg-white dark:bg-[#172136] hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60 text-slate-700 dark:text-slate-200 font-semibold text-sm py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-center gap-3 transition-all hover:shadow-md active:scale-[0.99]"
           >
             {loading ? (
-              <span className="text-slate-500">Đang xử lý…</span>
+              <span className="text-slate-500">{t('processing')}</span>
             ) : (
               <>
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -166,7 +168,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                   <path fill="#FBBC05" d="M5.32 14.27c-.24-.73-.38-1.5-.38-2.27s.14-1.54.38-2.27V6.58H1.32C.48 8.24 0 10.06 0 12s.48 3.76 1.32 5.42l4-3.15z"/>
                   <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.38 0 3.33 2.64 1.32 6.58l4 3.15c.94-2.83 3.58-4.98 6.68-4.98z"/>
                 </svg>
-                <span>Tiếp tục với Google</span>
+                <span>{t('continueGoogle')}</span>
               </>
             )}
           </button>
@@ -181,7 +183,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
             </svg>
-            <span>Tiếp tục với Facebook</span>
+            <span>{t('continueFacebook')}</span>
           </button>
         </div>
 
@@ -189,7 +191,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         <div className="relative flex items-center justify-center gap-3">
           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
           <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-            Hoặc với Email
+            {t('orWithEmail')}
           </span>
           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
         </div>
@@ -206,7 +208,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLoginMode && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Họ và tên</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('fullName')}</label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -214,7 +216,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Nguyễn Văn A"
+                  placeholder={t('fullNamePlaceholder')}
                   className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700/80 rounded-xl pl-10 pr-4 py-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors"
                 />
               </div>
@@ -222,7 +224,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Địa chỉ Email</label>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('email')}</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -237,7 +239,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mật khẩu</label>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{t('password')}</label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -257,8 +259,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-sm py-3.5 rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
           >
             {loading
-              ? <span>Đang xử lý…</span>
-              : <><span>{isLoginMode ? 'Đăng nhập ngay' : 'Tạo tài khoản'}</span><ArrowRight className="w-4 h-4" /></>
+              ? <span>{t('processing')}</span>
+              : <><span>{isLoginMode ? t('loginNow') : t('createAccount')}</span><ArrowRight className="w-4 h-4" /></>
             }
           </button>
         </form>
@@ -270,7 +272,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             onClick={() => { setIsLoginMode(!isLoginMode); setErrorMessage(''); }}
             className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
           >
-            {isLoginMode ? 'Chưa có tài khoản? Đăng ký ngay' : 'Đã có tài khoản? Đăng nhập'}
+            {isLoginMode ? t('noAccount') : t('hasAccount')}
           </button>
         </div>
       </div>

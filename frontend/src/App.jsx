@@ -7,11 +7,14 @@ import ScheduleView from './components/ScheduleView';
 import AiTutorView from './components/AiTutorView';
 import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
+import ImportScheduleModal from './components/ImportScheduleModal';
 import { 
   QuizModal, 
   SummaryModal, 
   MindmapModal, 
-  CreateSubjectModal 
+  CreateSubjectModal,
+  CreateTaskModal,
+  CreateScheduleModal
 } from './components/Modals';
 import { 
   getStoredUser, 
@@ -27,16 +30,7 @@ import {
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [darkMode, setDarkMode] = useState(false);
-  const [user, setUser] = useState(() => getStoredUser() || {
-    fullName: "Minh Anh",
-    email: "user@example.com",
-    role: "Premium Student",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-    streak: 14,
-    dailyGoalPercent: 75,
-    hoursStudied: 4.5,
-    goalHours: 6.0,
-  });
+  const [user, setUser] = useState(() => getStoredUser() || null);
 
   // Toggle dark mode class on <html> element
   useEffect(() => {
@@ -61,6 +55,9 @@ export default function App() {
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isMindmapModalOpen, setIsMindmapModalOpen] = useState(false);
   const [isCreateSubjectOpen, setIsCreateSubjectOpen] = useState(false);
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isCreateScheduleOpen, setIsCreateScheduleOpen] = useState(false);
+  const [isImportScheduleOpen, setIsImportScheduleOpen] = useState(false);
   const [activeNoteOrDoc, setActiveNoteOrDoc] = useState(null);
 
   // 1. Fetch Real Backend Data
@@ -145,7 +142,7 @@ export default function App() {
         
         {/* Header */}
         <Header 
-          user={user || { fullName: "Đăng nhập", role: "Ghé thăm", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" }} 
+          user={user} 
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
@@ -159,39 +156,33 @@ export default function App() {
             <DashboardView 
               data={{
                 user: user,
-                subjects: subjects.length > 0 ? subjects : [
-                  { id: 1, name: "Toán giải tích", color: "#2563EB", progress: 80, totalDocuments: 12, totalNotes: 45, image: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=400&q=80" },
-                  { id: 2, name: "Vật lý nguyên tử", color: "#0284C7", progress: 45, totalDocuments: 8, totalNotes: 22, image: "https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=400&q=80" },
-                  { id: 3, name: "Tiếng Anh chuyên ngành", color: "#D97706", progress: 90, totalDocuments: 25, totalNotes: 115, image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=400&q=80" }
-                ],
-                tasks: tasks.length > 0 ? tasks.map(t => ({
+                subjects: subjects,
+                todayData: todayData,
+                tasks: tasks.map(t => ({
                   id: t.id,
                   title: t.title,
                   subject: t.subjectName || "Chung",
                   subjectColor: t.subjectColor || "#2563EB",
                   completed: t.status === "DONE",
-                  priority: "BÌNH THƯỜNG",
-                  priorityClass: "bg-blue-50 text-blue-600"
-                })) : [
-                  { id: 1, title: "Làm bài tập Vật lý chương 3", subject: "Vật Lý", subjectColor: "#0284C7", completed: true, priority: "LƯU TIÊN CAO", priorityClass: "bg-red-50 text-red-600" },
-                  { id: 2, title: "Học 20 từ vựng Tiếng Anh mới", subject: "Tiếng Anh", subjectColor: "#D97706", completed: false, priority: "TRUNG BÌNH", priorityClass: "bg-amber-50 text-amber-600" },
-                  { id: 3, title: "Ôn tập công thức đạo hàm", subject: "Toán học", subjectColor: "#2563EB", completed: false, priority: "BÌNH THƯỜNG", priorityClass: "bg-blue-50 text-blue-600" }
-                ]
+                  priority: t.priority === "HIGH" ? "ƯU TIÊN CAO" : t.priority === "MEDIUM" ? "TRUNG BÌNH" : "BÌNH THƯỜNG",
+                  priorityClass: t.priority === "HIGH" 
+                    ? "bg-red-50 text-red-600" 
+                    : t.priority === "MEDIUM" 
+                    ? "bg-amber-50 text-amber-600" 
+                    : "bg-blue-50 text-blue-600"
+                }))
               }}
               onNavigate={(tab) => setActiveTab(tab)}
-              onOpenNewSubject={() => setIsCreateSubjectOpen(true)}
+              onOpenNewSubject={() => setIsCreateTaskOpen(true)}
               onOpenAiTutor={() => setActiveTab('ai-tutor')}
             />
           )}
 
           {activeTab === 'subjects' && (
             <SubjectsView 
-              subjects={subjects.length > 0 ? subjects : [
-                { id: 1, name: "Toán giải tích", color: "#2563EB", description: "Ôn tập về tích phân bội, phương trình vi phân.", progress: 80, totalDocuments: 12, totalNotes: 45, icon: "Sigma" },
-                { id: 2, name: "Vật lý nguyên tử", color: "#0284C7", description: "Cơ học lượng tử cơ bản, cấu tạo hạt nhân.", progress: 45, totalDocuments: 8, totalNotes: 22, icon: "Atom" },
-                { id: 3, name: "Tiếng Anh chuyên ngành", color: "#D97706", description: "Từ vựng chuyên môn kỹ thuật.", progress: 90, totalDocuments: 25, totalNotes: 115, icon: "Languages" }
-              ]} 
+              subjects={subjects} 
               onOpenNewSubject={() => setIsCreateSubjectOpen(true)}
+              onReload={() => loadData()}
             />
           )}
 
@@ -201,6 +192,8 @@ export default function App() {
                 id: s.id,
                 subjectName: s.subjectName,
                 date: s.date,          // ISO date string từ backend
+                dayOfWeek: s.dayOfWeek,
+                isRecurring: s.isRecurring,
                 time: s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : undefined,
                 startTime: s.startTime,
                 endTime: s.endTime,
@@ -222,23 +215,24 @@ export default function App() {
                   : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600',
                 deadlineTime: t.deadlineTime,
               }))}
-              onOpenNewSession={() => setIsCreateSubjectOpen(true)}
+              onOpenNewSession={() => setIsCreateTaskOpen(true)}
+              onOpenNewSchedule={() => setIsCreateScheduleOpen(true)}
+              onOpenImportSchedule={() => setIsImportScheduleOpen(true)}
               onOpenAiTutor={() => setActiveTab('ai-tutor')}
+              onReload={() => loadData()}
             />
           )}
 
           {activeTab === 'ai-tutor' && (
             <AiTutorView 
-              history={[
-                { id: 1, title: "Giải tích 1 - Bài tập chương 3.pdf", action: "Đã tóm tắt", timeAgo: "2 giờ trước" },
-                { id: 2, title: "Kinh tế học vĩ mô - Ghi chú buổi 12.docx", action: "Đã vẽ Mindmap", timeAgo: "5 giờ trước" }
-              ]} 
+              history={[]} 
               onOpenQuizModal={() => setIsQuizModalOpen(true)}
               onOpenMindmapModal={() => setIsMindmapModalOpen(true)}
               onOpenSummaryModal={(title) => {
                 setActiveNoteOrDoc(title);
                 setIsSummaryModalOpen(true);
               }}
+              onReload={() => loadData()}
             />
           )}
 
@@ -248,14 +242,14 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-6">
                     <img 
-                      src={user?.avatar || user?.avatarUrl || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"} 
+                      src={user?.avatar || user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"} 
                       alt={user?.fullName || 'User'} 
                       className="w-24 h-24 rounded-full object-cover ring-4 ring-blue-500/20"
                     />
                     <div>
-                      <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white">{user?.fullName || 'Minh Anh'}</h2>
-                      <p className="text-blue-600 dark:text-blue-400 font-semibold text-sm">{user?.email || user?.role || 'Premium Student'}</p>
-                      <p className="text-slate-400 dark:text-slate-400 text-xs mt-1">Học sinh tích cực với {user?.streak || 14} ngày streak liên tiếp ⚡</p>
+                      <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white">{user?.fullName || user?.email || 'Người dùng'}</h2>
+                      <p className="text-blue-600 dark:text-blue-400 font-semibold text-sm">{user?.email || user?.role || 'Học viên'}</p>
+                      <p className="text-slate-400 dark:text-slate-400 text-xs mt-1">Chuỗi học tập: {user?.streak || 0} ngày liên tiếp ⚡</p>
                     </div>
                   </div>
 
@@ -301,6 +295,24 @@ export default function App() {
         isOpen={isCreateSubjectOpen} 
         onClose={() => setIsCreateSubjectOpen(false)} 
         onAddSubject={() => loadData()}
+      />
+      <CreateTaskModal 
+        isOpen={isCreateTaskOpen} 
+        onClose={() => setIsCreateTaskOpen(false)} 
+        subjects={subjects}
+        onAddTask={() => loadData()}
+      />
+      <CreateScheduleModal 
+        isOpen={isCreateScheduleOpen} 
+        onClose={() => setIsCreateScheduleOpen(false)} 
+        subjects={subjects}
+        onAddSlot={() => loadData()}
+      />
+      <ImportScheduleModal
+        isOpen={isImportScheduleOpen}
+        onClose={() => setIsImportScheduleOpen(false)}
+        subjects={subjects}
+        onImportSuccess={() => loadData()}
       />
     </div>
   );

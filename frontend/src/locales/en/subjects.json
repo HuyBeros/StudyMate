@@ -1,0 +1,16 @@
+{
+  "title": "My subjects",
+  "subtitle": "Manage your enrolled courses, track study progress and related materials to optimize your time.",
+  "addSubject": "Add subject",
+  "filter": "Filter",
+  "searchPlaceholder": "Search subjects...",
+  "addSubjectCard": "Add new subject",
+  "addSubjectHint": "Start tracking your progress in a new subject today.",
+  "progress": "Completion progress",
+  "documents": "documents",
+  "notes": "notes",
+  "filter_all": "All",
+  "filter_school": "School",
+  "filter_self": "Self-study",
+  "filter_lang": "Language"
+}

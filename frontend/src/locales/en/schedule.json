@@ -1,0 +1,34 @@
+{
+  "title": "Detailed schedule",
+  "tasks": "Tasks",
+  "addTask": "Add new task",
+  "todayProgress": "Today's progress",
+  "remainingTasks": "{{count}} tasks remaining",
+  "allDone": "🎉 You've completed all of today's tasks!",
+  "backToToday": "Back to today",
+  "noSchedule": "No classes scheduled",
+  "noScheduleToday": "You have no classes today. Use the time to review!",
+  "noScheduleDay": "No classes planned for this day.",
+  "noTasks": "No tasks yet",
+  "noTasksHint": "Add a new task to start tracking",
+
+  "days": {
+    "mon": "MON",
+    "tue": "TUE",
+    "wed": "WED",
+    "thu": "THU",
+    "fri": "FRI",
+    "sat": "SAT",
+    "sun": "SUN"
+  },
+
+  "priority": {
+    "HIGH": "HIGH PRIORITY",
+    "MEDIUM": "MEDIUM",
+    "LOW": "NORMAL"
+  },
+
+  "aiOptimizer": "Need help optimizing your schedule?",
+  "aiOptimizerDesc": "Ask AI to reorganize tasks based on priority and your available time.",
+  "askAIButton": "Ask AI Tutor"
+}

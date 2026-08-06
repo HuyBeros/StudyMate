@@ -1,0 +1,55 @@
+{
+  "appName": "EduFlow",
+  "tagline": "Study smarter every day",
+
+  "nav": {
+    "dashboard": "Dashboard",
+    "subjects": "Subjects",
+    "schedule": "Schedule",
+    "aiTutor": "AI Tutor",
+    "profile": "Profile",
+    "settings": "Settings",
+    "help": "Help",
+    "newSession": "New Session"
+  },
+
+  "header": {
+    "searchPlaceholder": "Search documents, lectures...",
+    "darkMode": "Dark Mode",
+    "profile": "My Profile",
+    "logout": "Log out",
+    "language": "Language",
+    "notLoggedIn": "You are not logged in",
+    "login": "Log in"
+  },
+
+  "language": {
+    "title": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+
+  "button": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "viewAll": "View all",
+    "addNew": "+ Add new"
+  },
+
+  "empty": {
+    "noData": "No data yet"
+  },
+
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "hoursAgo": "{{count}} hours ago",
+    "minutesAgo": "{{count}} minutes ago"
+  }
+}

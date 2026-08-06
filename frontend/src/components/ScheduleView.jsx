@@ -15,6 +15,8 @@ import {
   ClipboardList,
   CalendarDays
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { updateTaskStatusApi, deleteTaskApi } from '../services/api';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -45,9 +47,18 @@ function buildWeekDays(weekStart) {
   });
 }
 
-function formatMonthYear(date) {
-  return `Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
-}
+const mapJsDayToEnum = (jsDay) => {
+  const mapping = {
+    1: 'THU_2',
+    2: 'THU_3',
+    3: 'THU_4',
+    4: 'THU_5',
+    5: 'THU_6',
+    6: 'THU_7',
+    0: 'CHU_NHAT'
+  };
+  return mapping[jsDay];
+};
 
 function isSameDay(a, b) {
   return a.getDate() === b.getDate() &&
@@ -57,7 +68,8 @@ function isSameDay(a, b) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSession, onOpenAiTutor }) {
+export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSession, onOpenNewSchedule, onOpenImportSchedule, onOpenAiTutor, onReload }) {
+  const { t, i18n } = useTranslation('schedule');
   const today = useMemo(() => new Date(), []);
 
   const [weekStart, setWeekStart] = useState(() => getStartOfWeek(today));
@@ -72,16 +84,35 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
 
   const weekDays = useMemo(() => buildWeekDays(weekStart), [weekStart]);
 
-  // Tên tháng hiển thị — dùng tháng của ngày được chọn hoặc tuần hiện tại
-  const displayMonth = formatMonthYear(selectedDay);
+  // Tên tháng hiển thị — dùng Intl theo ngôn ngữ hiện tại
+  const displayMonth = useMemo(() => {
+    const locale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
+    return selectedDay.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  }, [selectedDay, i18n.language]);
+
+  // Labels thứ trong tuần theo ngôn ngữ
+  const weekDayLabel = (dayIndex) => {
+    // dayIndex: 0=Mon,1=Tue,...,6=Sun
+    const keys = ['mon','tue','wed','thu','fri','sat','sun'];
+    return t(`days.${keys[dayIndex]}`);
+  };
 
   // Lọc lịch theo ngày đã chọn
   const scheduleForDay = useMemo(() => {
     if (!schedule || schedule.length === 0) return [];
+    const selectedDayOfWeek = mapJsDayToEnum(selectedDay.getDay());
+
     return schedule.filter(item => {
-      if (!item.date) return false;
-      const itemDate = new Date(item.date);
-      return isSameDay(itemDate, selectedDay);
+      // 1. Nếu là lịch lặp lại định kỳ hàng tuần
+      if (item.isRecurring || item.isRecurring === undefined) {
+        return item.dayOfWeek === selectedDayOfWeek;
+      }
+      // 2. Nếu là lịch học một lần (bù/thi/sự kiện)
+      if (item.date) {
+        const itemDate = new Date(item.date);
+        return isSameDay(itemDate, selectedDay);
+      }
+      return false;
     });
   }, [schedule, selectedDay]);
 
@@ -91,8 +122,20 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
   const progressPercent = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
   const remainingTasks = totalTasks - doneTasks;
 
-  const toggleTask = (id) => {
-    setTaskList(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const toggleTask = async (id) => {
+    const target = taskList.find(t => t.id === id);
+    if (!target) return;
+    const isDone = target.completed || target.status === 'DONE';
+    const newStatus = isDone ? 'TODO' : 'DONE';
+
+    setTaskList(prev => prev.map(t => t.id === id ? { ...t, completed: !isDone, status: newStatus } : t));
+
+    try {
+      await updateTaskStatusApi(id, newStatus);
+      if (onReload) onReload();
+    } catch (e) {
+      console.error("Toggle task error:", e);
+    }
   };
 
   const goToPrevWeek = () => {
@@ -139,7 +182,7 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
       {/* 1. Month Navigation Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white">
+          <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white capitalize">
             {displayMonth}
           </h2>
 
@@ -168,7 +211,7 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
               onClick={goToToday}
               className="text-xs font-['Inter'] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
             >
-              Về hôm nay
+              {t('today', { defaultValue: 'Về hôm nay' })}
             </button>
           )}
         </div>
@@ -191,7 +234,7 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
 
       {/* 2. Days of Week Selector Bar */}
       <div className="grid grid-cols-7 gap-3">
-        {weekDays.map((day) => {
+        {weekDays.map((day, index) => {
           const isDaySelected = isSameDay(day.fullDate, selectedDay);
           const isDayToday = isSameDay(day.fullDate, today);
           return (
@@ -207,7 +250,7 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
               <span className={`text-[11px] font-bold tracking-wider mb-1 ${
                 isDaySelected ? 'text-blue-100' : 'text-slate-400 dark:text-slate-400'
               }`}>
-                {day.label}
+                {weekDayLabel(index)}
               </span>
               <span className="font-['Manrope'] font-extrabold text-2xl">
                 {day.date}
@@ -232,13 +275,13 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
             <div className="flex items-center justify-between">
               <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                Nhiệm vụ
+                {t('tasks', { defaultValue: 'Nhiệm vụ' })}
               </h3>
               <button
                 onClick={onOpenNewSession}
                 className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline font-['Inter']"
               >
-                + Thêm mới
+                {t('addTask', { ns: 'button', defaultValue: '+ Thêm mới' })}
               </button>
             </div>
 
@@ -246,8 +289,8 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
               /* Empty state tasks */
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <ClipboardList className="w-10 h-10 text-slate-200 dark:text-slate-700 mb-3" />
-                <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">Chưa có nhiệm vụ nào</p>
-                <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Thêm nhiệm vụ mới để bắt đầu theo dõi</p>
+                <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">{t('noTasks')}</p>
+                <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">{t('noTasksHint')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -304,7 +347,7 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
               className="w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 rounded-2xl text-xs font-['Inter'] font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center gap-1.5 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Thêm nhiệm vụ mới</span>
+              <span>{t('addTask')}</span>
             </button>
           </div>
 
@@ -312,7 +355,7 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
           {totalTasks > 0 && (
             <div className="bg-blue-50/80 dark:bg-[#172136] border border-blue-100 dark:border-slate-800 rounded-3xl p-6 space-y-3">
               <div className="flex justify-between items-center text-xs font-bold text-blue-900 dark:text-blue-300">
-                <span>Tiến độ hôm nay</span>
+                <span>{t('todayProgress')}</span>
                 <span className="font-['Manrope'] text-xl text-blue-600 dark:text-blue-400 font-bold">
                   {progressPercent}%
                 </span>
@@ -325,8 +368,8 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
               </div>
               <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                 {remainingTasks > 0
-                  ? `Còn ${remainingTasks} nhiệm vụ cần hoàn thành`
-                  : '🎉 Bạn đã hoàn thành tất cả nhiệm vụ hôm nay!'}
+                  ? t('remainingTasks', { count: remainingTasks })
+                  : t('allDone')}
               </p>
             </div>
           )}
@@ -337,18 +380,38 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
               <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Lịch trình chi tiết
+              {t('title')}
             </h3>
 
-            <span className={`text-xs font-['Inter'] font-semibold px-3 py-1 rounded-full ${
-              isSelectedDayToday
-                ? 'bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-            }`}>
-              {isSelectedDayToday
-                ? 'Hôm nay'
-                : `${selectedDay.getDate()}/${selectedDay.getMonth() + 1}/${selectedDay.getFullYear()}`}
-            </span>
+            <div className="flex items-center gap-3">
+              {onOpenImportSchedule && (
+                <button
+                  onClick={onOpenImportSchedule}
+                  className="text-xs font-['Inter'] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Nhập TKB bằng AI</span>
+                </button>
+              )}
+              {onOpenNewSchedule && (
+                <button
+                  onClick={onOpenNewSchedule}
+                  className="text-xs font-['Inter'] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm lịch học</span>
+                </button>
+              )}
+              <span className={`text-xs font-['Inter'] font-semibold px-3 py-1 rounded-full ${
+                isSelectedDayToday
+                  ? 'bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+              }`}>
+                {isSelectedDayToday
+                  ? t('backToToday', { defaultValue: 'Hôm nay' })
+                  : `${selectedDay.getDate()}/${selectedDay.getMonth() + 1}/${selectedDay.getFullYear()}`}
+              </span>
+            </div>
           </div>
 
           {/* Timeline Slots hoặc Empty State */}
@@ -356,12 +419,10 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <CalendarOff className="w-14 h-14 text-slate-200 dark:text-slate-700 mb-4" />
               <p className="text-base font-['Be_Vietnam_Pro'] font-semibold text-slate-400 dark:text-slate-500">
-                Không có lịch học
+                {t('noSchedule')}
               </p>
               <p className="text-xs text-slate-300 dark:text-slate-600 mt-1 max-w-xs">
-                {isSelectedDayToday
-                  ? 'Hôm nay bạn không có lịch học. Hãy tận dụng thời gian ôn tập!'
-                  : 'Ngày này chưa có lịch học được lên kế hoạch.'}
+                {isSelectedDayToday ? t('noScheduleToday') : t('noScheduleDay')}
               </p>
             </div>
           ) : (
@@ -425,16 +486,16 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
           </div>
           <div>
             <h4 className="font-['Be_Vietnam_Pro'] font-bold text-xl">
-              Cần giúp tối ưu hóa lịch trình?
+              {t('aiOptimizer')}
             </h4>
             <p className="text-teal-100 text-sm font-medium">
-              Hãy hỏi AI để sắp xếp lại các nhiệm vụ dựa trên độ ưu tiên và thời gian của bạn.
+              {t('aiOptimizerDesc')}
             </p>
           </div>
         </div>
 
         <button className="bg-white hover:bg-teal-50 text-teal-900 font-['Inter'] font-bold text-sm py-3.5 px-6 rounded-2xl shadow-md transition-all shrink-0 flex items-center gap-2">
-          <span>Hỏi AI Trợ Lý</span>
+          <span>{t('askAIButton')}</span>
           <Sparkles className="w-4 h-4 text-teal-600" />
         </button>
       </div>

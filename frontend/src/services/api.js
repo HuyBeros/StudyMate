@@ -209,6 +209,29 @@ export async function deleteScheduleSlotApi(id) {
   });
 }
 
+export async function importScheduleImageApi(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return await request('/schedule/import/image', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+export async function confirmScheduleImportApi(slots) {
+  return await request('/schedule/import/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ slots }),
+  });
+}
+
+export async function checkScheduleConflictApi(slotData) {
+  return await request('/schedule/check-conflict', {
+    method: 'POST',
+    body: JSON.stringify(slotData),
+  });
+}
+
 // ── 5. TASK API ─────────────────────────────────────────
 export async function getTasksApi(status, subjectId) {
   const params = new URLSearchParams();

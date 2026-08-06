@@ -1,0 +1,34 @@
+{
+  "title": "Lịch trình chi tiết",
+  "tasks": "Nhiệm vụ",
+  "addTask": "Thêm nhiệm vụ mới",
+  "todayProgress": "Tiến độ hôm nay",
+  "remainingTasks": "Còn {{count}} nhiệm vụ cần hoàn thành",
+  "allDone": "🎉 Bạn đã hoàn thành tất cả nhiệm vụ hôm nay!",
+  "backToToday": "Về hôm nay",
+  "noSchedule": "Không có lịch học",
+  "noScheduleToday": "Hôm nay bạn không có lịch học. Hãy tận dụng thời gian ôn tập!",
+  "noScheduleDay": "Ngày này chưa có lịch học được lên kế hoạch.",
+  "noTasks": "Chưa có nhiệm vụ nào",
+  "noTasksHint": "Thêm nhiệm vụ mới để bắt đầu theo dõi",
+
+  "days": {
+    "mon": "THỨ 2",
+    "tue": "THỨ 3",
+    "wed": "THỨ 4",
+    "thu": "THỨ 5",
+    "fri": "THỨ 6",
+    "sat": "THỨ 7",
+    "sun": "CHỦ NHẬT"
+  },
+
+  "priority": {
+    "HIGH": "ƯU TIÊN CAO",
+    "MEDIUM": "TRUNG BÌNH",
+    "LOW": "BÌNH THƯỜNG"
+  },
+
+  "aiOptimizer": "Cần giúp tối ưu hóa lịch trình?",
+  "aiOptimizerDesc": "Hãy hỏi AI để sắp xếp lại các nhiệm vụ dựa trên độ ưu tiên và thời gian của bạn.",
+  "askAIButton": "Hỏi AI Trợ Lý"
+}

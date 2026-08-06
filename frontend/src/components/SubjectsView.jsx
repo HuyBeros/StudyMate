@@ -12,6 +12,7 @@ import {
   Folder,
   BookOpen
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const iconMap = {
   Sigma: Sigma,
@@ -21,6 +22,7 @@ const iconMap = {
 };
 
 export default function SubjectsView({ subjects, onOpenNewSubject }) {
+  const { t } = useTranslation('subjects');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('ALL');
 
@@ -29,24 +31,30 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
     s.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const typeLabels = {
+    ALL:        t('filter_all'),
+    SCHOOL:     t('filter_school'),
+    SELF_STUDY: t('filter_self'),
+    LANGUAGE:   t('filter_lang'),
+  };
+
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
       {/* 1. Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white">
-            Môn học của tôi
+            {t('title')}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 font-['Be_Vietnam_Pro'] font-medium text-sm max-w-2xl leading-relaxed">
-            Quản lý các môn học đang theo dõi, tiến độ học tập và tài liệu liên quan để tối ưu hóa thời gian của bạn.
+            {t('subtitle')}
           </p>
         </div>
 
-        {/* Action Buttons matching screenshot 2 */}
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111C32] hover:bg-slate-50 dark:hover:bg-slate-800 font-['Inter'] font-bold text-sm text-slate-700 dark:text-slate-200 shadow-2xs transition-all">
             <Filter className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-            <span>Lọc</span>
+            <span>{t('filter')}</span>
           </button>
           
           <button 
@@ -54,12 +62,12 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
             className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-['Inter'] font-bold text-sm shadow-md shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Plus className="w-5 h-5" />
-            <span>Thêm môn học</span>
+            <span>{t('addSubject')}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Search Bar matching screenshot (#172136) */}
+      {/* 2. Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-[#111C32] p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -67,7 +75,7 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm kiếm môn học..."
+            placeholder={t('searchPlaceholder')}
             className="w-full bg-slate-50 dark:bg-[#172136] border border-transparent focus:border-blue-500 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 pl-10 pr-4 py-2 rounded-xl outline-none transition-all"
           />
         </div>
@@ -83,16 +91,13 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              {type === 'ALL' && 'Tất cả'}
-              {type === 'SCHOOL' && 'Trường học'}
-              {type === 'SELF_STUDY' && 'Tự học'}
-              {type === 'LANGUAGE' && 'Ngoại ngữ'}
+              {typeLabels[type]}
             </button>
           ))}
         </div>
       </div>
 
-      {/* 3. Subjects Cards Grid matching screenshot 2 (#111C32) */}
+      {/* 3. Subjects Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredSubjects.map((subject) => {
           const IconComp = iconMap[subject.icon] || BookOpen;
@@ -131,7 +136,7 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
               <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-500 dark:text-slate-400 font-['Inter']">Tiến độ hoàn thành</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-['Inter']">{t('progress')}</span>
                     <span className="text-blue-600 dark:text-blue-400 font-['Manrope'] font-bold">{subject.progress}%</span>
                   </div>
                   <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -145,11 +150,11 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
                 <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 font-semibold pt-1">
                   <div className="flex items-center gap-1.5">
                     <Folder className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>{subject.totalDocuments} tài liệu</span>
+                    <span>{subject.totalDocuments} {t('documents')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FileText className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>{subject.totalNotes} ghi chú</span>
+                    <span>{subject.totalNotes} {t('notes')}</span>
                   </div>
                 </div>
               </div>
@@ -166,10 +171,10 @@ export default function SubjectsView({ subjects, onOpenNewSubject }) {
             <Plus className="w-8 h-8" />
           </div>
           <h4 className="font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            Thêm môn học mới
+            {t('addSubjectCard')}
           </h4>
           <p className="text-slate-400 text-xs font-medium mt-1 max-w-xs">
-            Bắt đầu theo dõi tiến độ một môn học mới ngay hôm nay.
+            {t('addSubjectHint')}
           </p>
         </div>
       </div>

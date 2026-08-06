@@ -1,0 +1,16 @@
+{
+  "title": "Môn học của tôi",
+  "subtitle": "Quản lý các môn học đang theo dõi, tiến độ học tập và tài liệu liên quan để tối ưu hóa thời gian của bạn.",
+  "addSubject": "Thêm môn học",
+  "filter": "Lọc",
+  "searchPlaceholder": "Tìm kiếm môn học...",
+  "addSubjectCard": "Thêm môn học mới",
+  "addSubjectHint": "Bắt đầu theo dõi tiến độ một môn học mới ngay hôm nay.",
+  "progress": "Tiến độ hoàn thành",
+  "documents": "tài liệu",
+  "notes": "ghi chú",
+  "filter_all": "Tất cả",
+  "filter_school": "Trường học",
+  "filter_self": "Tự học",
+  "filter_lang": "Ngoại ngữ"
+}

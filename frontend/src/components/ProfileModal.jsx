@@ -112,7 +112,7 @@ export default function ProfileModal({ isOpen, onClose, user, onUpdateUser }) {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="VD: Minh Anh"
+                placeholder="VD: Nguyễn Văn A"
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100"
               />
             </div>
