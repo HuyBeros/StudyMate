@@ -13,7 +13,9 @@ import {
   GraduationCap,
   CalendarOff,
   ClipboardList,
-  CalendarDays
+  CalendarDays,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { updateTaskStatusApi, deleteTaskApi } from '../services/api';
@@ -68,7 +70,7 @@ function isSameDay(a, b) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSession, onOpenNewSchedule, onOpenImportSchedule, onOpenAiTutor, onReload }) {
+export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSession, onOpenNewSchedule, onOpenImportSchedule, onOpenAiTutor, onReload, onEditSchedule, onDeleteSchedule }) {
   const { t, i18n } = useTranslation('schedule');
   const today = useMemo(() => new Date(), []);
 
@@ -459,12 +461,28 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
                         </div>
                       </div>
 
-                      <div className="w-8 h-8 rounded-full bg-white dark:bg-[#111C32] flex items-center justify-center shrink-0 shadow-2xs">
-                        {item.iconType === 'Video' ? (
-                          <Video className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                        ) : (
-                          <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => onEditSchedule && onEditSchedule(item)}
+                          title="Chỉnh sửa lịch học"
+                          className="w-8 h-8 rounded-full bg-white dark:bg-[#111C32] hover:bg-blue-50 dark:hover:bg-blue-950/50 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center transition-colors shadow-2xs"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteSchedule && onDeleteSchedule(item)}
+                          title="Xóa lịch học"
+                          className="w-8 h-8 rounded-full bg-white dark:bg-[#111C32] hover:bg-red-50 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center transition-colors shadow-2xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="w-8 h-8 rounded-full bg-white dark:bg-[#111C32] flex items-center justify-center shrink-0 shadow-2xs">
+                          {item.iconType === 'Video' ? (
+                            <Video className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                          ) : (
+                            <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

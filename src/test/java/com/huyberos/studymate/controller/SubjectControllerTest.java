@@ -80,7 +80,24 @@ class SubjectControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").isArray());
 
-        // 3. Xóa môn học
+        // 3. Cập nhật môn học (PUT)
+        SubjectRequest updateReq = new SubjectRequest();
+        updateReq.setName("Cấu Trúc Dữ Liệu Nâng Cao");
+        updateReq.setColor("#EF4444");
+        updateReq.setType(SubjectType.SELF_STUDY);
+        updateReq.setClassCode("INT2203-ADV");
+
+        mockMvc.perform(put("/api/subjects/" + subjectId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.name").value("Cấu Trúc Dữ Liệu Nâng Cao"))
+                .andExpect(jsonPath("$.data.color").value("#EF4444"))
+                .andExpect(jsonPath("$.data.type").value("SELF_STUDY"));
+
+        // 4. Xóa môn học
         mockMvc.perform(delete("/api/subjects/" + subjectId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())

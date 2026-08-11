@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, CheckCircle2, AlertCircle, Copy, Sparkles, Brain, Plus, Calendar, Clock, BookOpen, User, MapPin, Loader2, Award
+  X, CheckCircle2, AlertCircle, Copy, Sparkles, Brain, Plus, Calendar, Clock, BookOpen, User, MapPin, Loader2, Award, Trash2, Edit3
 } from 'lucide-react';
 import { 
   createSubjectApi, 
+  updateSubjectApi,
   createTaskApi, 
   createScheduleSlotApi, 
+  updateScheduleSlotApi,
   generateQuizFromNoteApi, 
   generateQuizFromDocApi, 
   attemptQuizApi, 
@@ -479,13 +481,30 @@ export function MindmapModal({ isOpen, onClose, noteId, docId }) {
 }
 
 // ── 4. CREATE SUBJECT MODAL (Real API Call) ───────────────────────────────────
-export function CreateSubjectModal({ isOpen, onClose, onAddSubject }) {
+export function CreateSubjectModal({ isOpen, onClose, onAddSubject, subjectToEdit = null }) {
   const [name, setName] = useState('');
   const [color, setColor] = useState('#2563EB');
   const [type, setType] = useState('SCHOOL');
   const [classCode, setClassCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      if (subjectToEdit) {
+        setName(subjectToEdit.name || '');
+        setColor(subjectToEdit.color || '#2563EB');
+        setType(subjectToEdit.type || 'SCHOOL');
+        setClassCode(subjectToEdit.classCode || '');
+      } else {
+        setName('');
+        setColor('#2563EB');
+        setType('SCHOOL');
+        setClassCode('');
+      }
+      setError('');
+    }
+  }, [isOpen, subjectToEdit]);
 
   if (!isOpen) return null;
 
@@ -496,14 +515,20 @@ export function CreateSubjectModal({ isOpen, onClose, onAddSubject }) {
     setError('');
 
     try {
-      const res = await createSubjectApi({ name, color, type, classCode });
+      let res;
+      if (subjectToEdit) {
+        res = await updateSubjectApi(subjectToEdit.id, { name, color, type, classCode });
+      } else {
+        res = await createSubjectApi({ name, color, type, classCode });
+      }
+
       if (res && res.success) {
         onAddSubject();
         onClose();
         setName('');
         setClassCode('');
       } else {
-        setError(res?.message || 'Tạo môn học thất bại.');
+        setError(res?.message || (subjectToEdit ? 'Cập nhật môn học thất bại.' : 'Tạo môn học thất bại.'));
       }
     } catch (err) {
       setError('Không thể kết nối đến máy chủ.');
@@ -518,7 +543,7 @@ export function CreateSubjectModal({ isOpen, onClose, onAddSubject }) {
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-blue-600" />
-            <span>Thêm môn học mới</span>
+            <span>{subjectToEdit ? 'Chỉnh sửa môn học' : 'Thêm môn học mới'}</span>
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-500">
             <X className="w-4 h-4" />
@@ -586,7 +611,7 @@ export function CreateSubjectModal({ isOpen, onClose, onAddSubject }) {
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
             <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-sm">Hủy</button>
             <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md disabled:opacity-60">
-              {loading ? 'Đang tạo...' : 'Tạo môn học'}
+              {subjectToEdit ? (loading ? 'Đang lưu...' : 'Lưu thay đổi') : (loading ? 'Đang tạo...' : 'Tạo môn học')}
             </button>
           </div>
         </form>
@@ -746,7 +771,7 @@ const PERIODS_MAP = {
   ]
 };
 
-export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot }) {
+export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot, slotToEdit = null }) {
   const [subjectId, setSubjectId] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState('THU_2');
   const [shift, setShift] = useState('SANG');
@@ -770,12 +795,39 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot 
   const [newSubjectClassCode, setNewSubjectClassCode] = useState('');
 
   useEffect(() => {
-    if (subjects.length > 0 && !subjectId) {
-      setSubjectId(subjects[0].id);
-    } else if (subjects.length === 0) {
-      setSubjectId('NEW_SUBJECT');
+    if (isOpen) {
+      if (slotToEdit) {
+        setSubjectId(slotToEdit.subjectId || (slotToEdit.subject ? slotToEdit.subject.id : (subjects[0]?.id || '')));
+        setDayOfWeek(slotToEdit.dayOfWeek || 'THU_2');
+        setShift(slotToEdit.shift || 'SANG');
+        const rawStart = slotToEdit.startTime || '08:00';
+        const rawEnd = slotToEdit.endTime || '10:30';
+        setStartTime(rawStart.substring(0, 5));
+        setEndTime(rawEnd.substring(0, 5));
+        setRoom(slotToEdit.room || slotToEdit.roomName || '');
+        setTeacherName(slotToEdit.teacherName || slotToEdit.teacher || '');
+        setIsRecurring(slotToEdit.isRecurring !== undefined ? slotToEdit.isRecurring : true);
+        if (slotToEdit.date) {
+          setDate(slotToEdit.date.substring(0, 10));
+        }
+      } else {
+        if (subjects.length > 0) {
+          setSubjectId(subjects[0].id);
+        } else {
+          setSubjectId('NEW_SUBJECT');
+        }
+        setDayOfWeek('THU_2');
+        setShift('SANG');
+        setStartTime('08:00');
+        setEndTime('10:30');
+        setRoom('');
+        setTeacherName('');
+        setIsRecurring(true);
+        setDate(new Date().toISOString().substring(0, 10));
+      }
+      setError('');
     }
-  }, [subjects]);
+  }, [isOpen, slotToEdit, subjects]);
 
   // Reset Period khi đổi Ca học
   useEffect(() => {
@@ -859,23 +911,30 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot 
         }
       }
 
-      // Tạo lịch học
-      const res = await createScheduleSlotApi({
+      const payload = {
         subjectId: Number(finalSubjectId),
         dayOfWeek: isRecurring ? dayOfWeek : null,
         date: !isRecurring ? date : null,
         shift,
-        startTime: `${startTime}:00`,
-        endTime: `${endTime}:00`,
+        startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
+        endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
         room,
         teacherName,
         isRecurring
-      });
+      };
+
+      let res;
+      if (slotToEdit) {
+        res = await updateScheduleSlotApi(slotToEdit.id, payload);
+      } else {
+        res = await createScheduleSlotApi(payload);
+      }
+
       if (res && res.success) {
         onAddSlot();
         onClose();
       } else {
-        setError(res?.message || 'Tạo lịch học thất bại.');
+        setError(res?.message || (slotToEdit ? 'Cập nhật lịch học thất bại.' : 'Tạo lịch học thất bại.'));
       }
     } catch (err) {
       setError('Không thể kết nối đến máy chủ.');
@@ -890,7 +949,7 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot 
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            <span>Thêm lịch học mới</span>
+            <span>{slotToEdit ? 'Chỉnh sửa lịch học' : 'Thêm lịch học mới'}</span>
           </h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-500">
             <X className="w-4 h-4" />
@@ -1125,10 +1184,60 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot 
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
             <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-sm">Hủy</button>
             <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md disabled:opacity-60">
-              {loading ? 'Đang tạo...' : 'Tạo lịch học'}
+              {slotToEdit ? (loading ? 'Đang lưu...' : 'Lưu thay đổi') : (loading ? 'Đang tạo...' : 'Tạo lịch học')}
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ── 7. CONFIRM DELETE MODAL ───────────────────────────────────────────────────
+export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, title = "Xác nhận xóa", message = "Bạn có chắc chắn muốn xóa không?", loading = false }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
+              {title}
+            </h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-500">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-['Inter']">
+          {message}
+        </p>
+
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+          <button type="button" onClick={onClose} disabled={loading} className="px-5 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-sm">
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md disabled:opacity-60 transition-all flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang xóa...</span>
+              </>
+            ) : (
+              <span>Xác nhận xóa</span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

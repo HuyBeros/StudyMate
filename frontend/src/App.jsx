@@ -14,7 +14,8 @@ import {
   MindmapModal, 
   CreateSubjectModal,
   CreateTaskModal,
-  CreateScheduleModal
+  CreateScheduleModal,
+  ConfirmDeleteModal
 } from './components/Modals';
 import { 
   getStoredUser, 
@@ -22,6 +23,8 @@ import {
   getSubjectsApi, 
   getScheduleApi, 
   getTasksApi, 
+  deleteSubjectApi,
+  deleteScheduleSlotApi,
   logoutApi,
   getAuthToken,
   setStoredUser
@@ -59,6 +62,13 @@ export default function App() {
   const [isCreateScheduleOpen, setIsCreateScheduleOpen] = useState(false);
   const [isImportScheduleOpen, setIsImportScheduleOpen] = useState(false);
   const [activeNoteOrDoc, setActiveNoteOrDoc] = useState(null);
+
+  // Edit & Delete state
+  const [subjectToEdit, setSubjectToEdit] = useState(null);
+  const [subjectToDelete, setSubjectToDelete] = useState(null);
+  const [scheduleSlotToEdit, setScheduleSlotToEdit] = useState(null);
+  const [scheduleSlotToDelete, setScheduleSlotToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // 1. Fetch Real Backend Data
   const loadData = useCallback(async () => {
@@ -100,6 +110,68 @@ export default function App() {
     }
   }, [loadData]);
 
+  // Handlers for Subject Edit & Delete
+  const handleOpenNewSubject = () => {
+    setSubjectToEdit(null);
+    setIsCreateSubjectOpen(true);
+  };
+
+  const handleEditSubject = (subject) => {
+    setSubjectToEdit(subject);
+    setIsCreateSubjectOpen(true);
+  };
+
+  const handleDeleteSubject = (subject) => {
+    setSubjectToDelete(subject);
+  };
+
+  const confirmDeleteSubject = async () => {
+    if (!subjectToDelete) return;
+    setDeleteLoading(true);
+    try {
+      const res = await deleteSubjectApi(subjectToDelete.id);
+      if (res && res.success) {
+        setSubjectToDelete(null);
+        loadData();
+      }
+    } catch (e) {
+      console.error("Delete subject error:", e);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handlers for Schedule Edit & Delete
+  const handleOpenNewSchedule = () => {
+    setScheduleSlotToEdit(null);
+    setIsCreateScheduleOpen(true);
+  };
+
+  const handleEditSchedule = (slot) => {
+    setScheduleSlotToEdit(slot);
+    setIsCreateScheduleOpen(true);
+  };
+
+  const handleDeleteSchedule = (slot) => {
+    setScheduleSlotToDelete(slot);
+  };
+
+  const confirmDeleteSchedule = async () => {
+    if (!scheduleSlotToDelete) return;
+    setDeleteLoading(true);
+    try {
+      const res = await deleteScheduleSlotApi(scheduleSlotToDelete.id);
+      if (res && res.success) {
+        setScheduleSlotToDelete(null);
+        loadData();
+      }
+    } catch (e) {
+      console.error("Delete schedule slot error:", e);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // Handle Auth success
   const handleAuthSuccess = (userData) => {
     const newUserObj = {
@@ -134,7 +206,7 @@ export default function App() {
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        onOpenNewSession={() => setIsCreateSubjectOpen(true)}
+        onOpenNewSession={handleOpenNewSubject}
       />
 
       {/* Main Body */}
@@ -181,7 +253,9 @@ export default function App() {
           {activeTab === 'subjects' && (
             <SubjectsView 
               subjects={subjects} 
-              onOpenNewSubject={() => setIsCreateSubjectOpen(true)}
+              onOpenNewSubject={handleOpenNewSubject}
+              onEditSubject={handleEditSubject}
+              onDeleteSubject={handleDeleteSubject}
               onReload={() => loadData()}
             />
           )}
@@ -190,15 +264,18 @@ export default function App() {
             <ScheduleView 
               schedule={schedule.map(s => ({
                 id: s.id,
+                subjectId: s.subjectId,
                 subjectName: s.subjectName,
                 date: s.date,          // ISO date string từ backend
                 dayOfWeek: s.dayOfWeek,
-                isRecurring: s.isRecurring,
-                time: s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : undefined,
+                shift: s.shift,
                 startTime: s.startTime,
                 endTime: s.endTime,
+                time: s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : undefined,
                 room: s.room,
                 teacher: s.teacherName,
+                teacherName: s.teacherName,
+                isRecurring: s.isRecurring,
                 iconType: s.iconType,
               }))}
               tasks={tasks.map(t => ({
@@ -216,7 +293,9 @@ export default function App() {
                 deadlineTime: t.deadlineTime,
               }))}
               onOpenNewSession={() => setIsCreateTaskOpen(true)}
-              onOpenNewSchedule={() => setIsCreateScheduleOpen(true)}
+              onOpenNewSchedule={handleOpenNewSchedule}
+              onEditSchedule={handleEditSchedule}
+              onDeleteSchedule={handleDeleteSchedule}
               onOpenImportSchedule={() => setIsImportScheduleOpen(true)}
               onOpenAiTutor={() => setActiveTab('ai-tutor')}
               onReload={() => loadData()}
@@ -293,7 +372,11 @@ export default function App() {
       />
       <CreateSubjectModal 
         isOpen={isCreateSubjectOpen} 
-        onClose={() => setIsCreateSubjectOpen(false)} 
+        onClose={() => {
+          setIsCreateSubjectOpen(false);
+          setSubjectToEdit(null);
+        }} 
+        subjectToEdit={subjectToEdit}
         onAddSubject={() => loadData()}
       />
       <CreateTaskModal 
@@ -304,8 +387,12 @@ export default function App() {
       />
       <CreateScheduleModal 
         isOpen={isCreateScheduleOpen} 
-        onClose={() => setIsCreateScheduleOpen(false)} 
+        onClose={() => {
+          setIsCreateScheduleOpen(false);
+          setScheduleSlotToEdit(null);
+        }} 
         subjects={subjects}
+        slotToEdit={scheduleSlotToEdit}
         onAddSlot={() => loadData()}
       />
       <ImportScheduleModal
@@ -313,6 +400,22 @@ export default function App() {
         onClose={() => setIsImportScheduleOpen(false)}
         subjects={subjects}
         onImportSuccess={() => loadData()}
+      />
+      <ConfirmDeleteModal
+        isOpen={!!subjectToDelete}
+        onClose={() => setSubjectToDelete(null)}
+        onConfirm={confirmDeleteSubject}
+        title="Xóa môn học"
+        message={`Bạn có chắc chắn muốn xóa môn học "${subjectToDelete?.name || ''}" không? Hành động này cũng sẽ xóa toàn bộ lịch học, ghi chú và tài liệu liên quan.`}
+        loading={deleteLoading}
+      />
+      <ConfirmDeleteModal
+        isOpen={!!scheduleSlotToDelete}
+        onClose={() => setScheduleSlotToDelete(null)}
+        onConfirm={confirmDeleteSchedule}
+        title="Xóa lịch học"
+        message={`Bạn có chắc chắn muốn xóa lịch học môn "${scheduleSlotToDelete?.subjectName || ''}" không?`}
+        loading={deleteLoading}
       />
     </div>
   );

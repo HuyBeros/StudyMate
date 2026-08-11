@@ -203,6 +203,13 @@ export async function createScheduleSlotApi(slotData) {
   });
 }
 
+export async function updateScheduleSlotApi(id, slotData) {
+  return await request(`/schedule/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(slotData),
+  });
+}
+
 export async function deleteScheduleSlotApi(id) {
   return await request(`/schedule/${id}`, {
     method: 'DELETE',
