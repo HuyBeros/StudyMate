@@ -5,13 +5,15 @@ import DashboardView from './components/DashboardView';
 import SubjectsView from './components/SubjectsView';
 import ScheduleView from './components/ScheduleView';
 import AiTutorView from './components/AiTutorView';
+import StatisticsView from './components/StatisticsView';
 import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
 import ImportScheduleModal from './components/ImportScheduleModal';
+import SubjectDetailView from './components/SubjectDetailView';
+import AiGenerateModal from './components/ai/AiGenerateModal';
+import AiLoadingState from './components/ai/AiLoadingState';
+import AiPreviewPanel from './components/ai/AiPreviewPanel';
 import { 
-  QuizModal, 
-  SummaryModal, 
-  MindmapModal, 
   CreateSubjectModal,
   CreateTaskModal,
   CreateScheduleModal,
@@ -23,12 +25,14 @@ import {
   getSubjectsApi, 
   getScheduleApi, 
   getTasksApi, 
+  getWeeklyStatsApi,
   deleteSubjectApi,
   deleteScheduleSlotApi,
   logoutApi,
   getAuthToken,
   setStoredUser
 } from './services/api';
+import * as api from './services/api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -50,18 +54,25 @@ export default function App() {
   const [schedule, setSchedule] = useState([]);
   const [todayData, setTodayData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [weeklyStats, setWeeklyStats] = useState(null);
 
   // Modals state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
-  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [isMindmapModalOpen, setIsMindmapModalOpen] = useState(false);
+  const [isAiGenerateModalOpen, setIsAiGenerateModalOpen] = useState(false);
+  const [aiGenerateType, setAiGenerateType] = useState(null);
+  
+  const [isAiLoadingOpen, setIsAiLoadingOpen] = useState(false);
+  const [isAiPreviewOpen, setIsAiPreviewOpen] = useState(false);
+  const [aiPreviewData, setAiPreviewData] = useState(null);
   const [isCreateSubjectOpen, setIsCreateSubjectOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCreateScheduleOpen, setIsCreateScheduleOpen] = useState(false);
   const [isImportScheduleOpen, setIsImportScheduleOpen] = useState(false);
+  const [activeSubjectId, setActiveSubjectId] = useState(null);
   const [activeNoteOrDoc, setActiveNoteOrDoc] = useState(null);
+  const [activeNoteId, setActiveNoteId] = useState(null);
+  const [activeDocId, setActiveDocId] = useState(null);
 
   // Edit & Delete state
   const [subjectToEdit, setSubjectToEdit] = useState(null);
@@ -74,11 +85,12 @@ export default function App() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [todayRes, subjectsRes, tasksRes, scheduleRes] = await Promise.all([
+      const [todayRes, subjectsRes, tasksRes, scheduleRes, statsRes] = await Promise.all([
         getTodayDashboardApi(),
         getSubjectsApi(),
         getTasksApi(),
-        getScheduleApi()
+        getScheduleApi(),
+        getWeeklyStatsApi()
       ]);
 
       if (todayRes && todayRes.success) {
@@ -95,6 +107,10 @@ export default function App() {
 
       if (scheduleRes && scheduleRes.success && Array.isArray(scheduleRes.data)) {
         setSchedule(scheduleRes.data);
+      }
+
+      if (statsRes && statsRes.success) {
+        setWeeklyStats(statsRes.data);
       }
 
     } catch (e) {
@@ -220,6 +236,11 @@ export default function App() {
           onLogout={handleLogout}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
+          subjects={subjects}
+          tasks={tasks}
+          schedule={schedule}
+          todayData={todayData}
+          onNavigate={(tab) => setActiveTab(tab)}
         />
 
         {/* Dynamic Views */}
@@ -230,12 +251,15 @@ export default function App() {
                 user: user,
                 subjects: subjects,
                 todayData: todayData,
+                schedule: schedule,
                 tasks: tasks.map(t => ({
                   id: t.id,
                   title: t.title,
                   subject: t.subjectName || "Chung",
                   subjectColor: t.subjectColor || "#2563EB",
                   completed: t.status === "DONE",
+                  status: t.status,
+                  deadline: t.deadline,
                   priority: t.priority === "HIGH" ? "ƯU TIÊN CAO" : t.priority === "MEDIUM" ? "TRUNG BÌNH" : "BÌNH THƯỜNG",
                   priorityClass: t.priority === "HIGH" 
                     ? "bg-red-50 text-red-600" 
@@ -247,6 +271,10 @@ export default function App() {
               onNavigate={(tab) => setActiveTab(tab)}
               onOpenNewSubject={() => setIsCreateTaskOpen(true)}
               onOpenAiTutor={() => setActiveTab('ai-tutor')}
+              onSubjectClick={(id) => {
+                setActiveSubjectId(id);
+                setActiveTab('subject-detail');
+              }}
             />
           )}
 
@@ -257,6 +285,39 @@ export default function App() {
               onEditSubject={handleEditSubject}
               onDeleteSubject={handleDeleteSubject}
               onReload={() => loadData()}
+              onSubjectClick={(id) => {
+                setActiveSubjectId(id);
+                setActiveTab('subject-detail');
+              }}
+            />
+          )}
+
+          {activeTab === 'subject-detail' && activeSubjectId != null && (
+            <SubjectDetailView
+              subjectId={activeSubjectId}
+              subjects={subjects}
+              onBack={() => {
+                setActiveTab('subjects');
+                setActiveSubjectId(null);
+              }}
+              onOpenQuizModal={(docId) => {
+                setActiveNoteOrDoc('doc');
+                setActiveDocId(docId);
+                setAiGenerateType('quiz');
+                setIsAiGenerateModalOpen(true);
+              }}
+              onOpenMindmapModal={(docId) => {
+                setActiveNoteOrDoc('doc');
+                setActiveDocId(docId);
+                setAiGenerateType('mindmap');
+                setIsAiGenerateModalOpen(true);
+              }}
+              onOpenSummaryModal={(docId) => {
+                setActiveNoteOrDoc('doc');
+                setActiveDocId(docId);
+                setAiGenerateType('summary');
+                setIsAiGenerateModalOpen(true);
+              }}
             />
           )}
 
@@ -303,15 +364,39 @@ export default function App() {
           )}
 
           {activeTab === 'ai-tutor' && (
-            <AiTutorView 
-              history={[]} 
-              onOpenQuizModal={() => setIsQuizModalOpen(true)}
-              onOpenMindmapModal={() => setIsMindmapModalOpen(true)}
-              onOpenSummaryModal={(title) => {
-                setActiveNoteOrDoc(title);
-                setIsSummaryModalOpen(true);
+            <AiTutorView
+              onOpenQuizModal={(noteId, docId) => {
+                setActiveNoteOrDoc(noteId ? 'note' : 'doc');
+                setActiveNoteId(noteId || null);
+                setActiveDocId(docId || null);
+                setAiGenerateType('quiz');
+                setIsAiGenerateModalOpen(true);
+              }}
+              onOpenMindmapModal={(noteId, docId) => {
+                setActiveNoteOrDoc(noteId ? 'note' : 'doc');
+                setActiveNoteId(noteId || null);
+                setActiveDocId(docId || null);
+                setAiGenerateType('mindmap');
+                setIsAiGenerateModalOpen(true);
+              }}
+              onOpenSummaryModal={(noteId, docId) => {
+                setActiveNoteOrDoc(noteId ? 'note' : 'doc');
+                setActiveNoteId(noteId || null);
+                setActiveDocId(docId || null);
+                setAiGenerateType('summary');
+                setIsAiGenerateModalOpen(true);
               }}
               onReload={() => loadData()}
+            />
+          )}
+
+          {activeTab === 'statistics' && (
+            <StatisticsView 
+              stats={weeklyStats}
+              subjects={subjects}
+              tasks={tasks}
+              schedule={schedule}
+              onOpenAiTutor={() => setActiveTab('ai-tutor')}
             />
           )}
 
@@ -357,18 +442,77 @@ export default function App() {
         user={user}
         onUpdateUser={handleUpdateUser}
       />
-      <QuizModal 
-        isOpen={isQuizModalOpen} 
-        onClose={() => setIsQuizModalOpen(false)} 
+      <AiGenerateModal 
+        isOpen={isAiGenerateModalOpen}
+        onClose={() => setIsAiGenerateModalOpen(false)}
+        type={aiGenerateType}
+        docId={activeDocId}
+        onGenerate={async (type, docId, config) => {
+          setIsAiGenerateModalOpen(false);
+          setIsAiLoadingOpen(true);
+          try {
+            let res;
+            if (activeNoteOrDoc === 'note') {
+              if (type === 'quiz') res = await api.generateQuizFromNoteApi(activeNoteId, config);
+              if (type === 'mindmap') res = await api.generateMindmapFromNoteApi(activeNoteId, config);
+              if (type === 'summary') res = await api.summarizeNoteApi(activeNoteId, config);
+            } else {
+              if (type === 'quiz') res = await api.generateQuizFromDocApi(docId, config);
+              if (type === 'mindmap') res = await api.generateMindmapFromDocApi(docId, config);
+              if (type === 'summary') res = await api.summarizeDocumentApi(docId, config);
+            }
+
+            if (res && res.success) {
+              setAiPreviewData(res.data);
+              setIsAiPreviewOpen(true);
+            } else {
+              alert(res?.message || 'Có lỗi xảy ra khi tạo nội dung AI.');
+            }
+          } catch (e) {
+            alert('Lỗi kết nối AI.');
+          } finally {
+            setIsAiLoadingOpen(false);
+          }
+        }}
       />
-      <SummaryModal 
-        isOpen={isSummaryModalOpen} 
-        onClose={() => setIsSummaryModalOpen(false)} 
-        title={activeNoteOrDoc || "Tài liệu học tập.pdf"}
+
+      <AiLoadingState 
+        isVisible={isAiLoadingOpen}
+        type={aiGenerateType}
       />
-      <MindmapModal 
-        isOpen={isMindmapModalOpen} 
-        onClose={() => setIsMindmapModalOpen(false)} 
+
+      <AiPreviewPanel 
+        isOpen={isAiPreviewOpen}
+        onClose={() => setIsAiPreviewOpen(false)}
+        data={aiPreviewData}
+        type={aiGenerateType}
+        onSave={async (updatedData) => {
+          try {
+            const payload = {
+              sourceType: activeNoteOrDoc === 'note' ? 'NOTE' : 'DOCUMENT',
+              sourceId: activeNoteOrDoc === 'note' ? activeNoteId : activeDocId,
+              title: updatedData.title,
+            };
+            if (aiGenerateType === 'quiz') payload.questions = updatedData.questions;
+            if (aiGenerateType === 'mindmap') payload.structure = updatedData.structure;
+            if (aiGenerateType === 'summary') payload.summary = updatedData.summary;
+
+            const res = await api.saveAiOutputApi(aiGenerateType, payload);
+            if (res?.success) {
+              alert('Lưu thành công!');
+              setIsAiPreviewOpen(false);
+              // Force reload subjects or subject details if needed
+            } else {
+              alert('Lưu thất bại.');
+            }
+          } catch(e) {
+            alert('Lỗi khi lưu.');
+          }
+        }}
+        onRegenerate={() => {
+          setIsAiPreviewOpen(false);
+          setIsAiGenerateModalOpen(true);
+        }}
       />
       <CreateSubjectModal 
         isOpen={isCreateSubjectOpen} 

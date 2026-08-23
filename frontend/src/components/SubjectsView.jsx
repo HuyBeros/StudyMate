@@ -12,7 +12,8 @@ import {
   Folder,
   BookOpen,
   Pencil,
-  Trash2
+  Trash2,
+  ChevronRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,7 +24,7 @@ const iconMap = {
   Code2: Code2
 };
 
-export default function SubjectsView({ subjects, onOpenNewSubject, onEditSubject, onDeleteSubject }) {
+export default function SubjectsView({ subjects, onOpenNewSubject, onEditSubject, onDeleteSubject, onSubjectClick }) {
   const { t } = useTranslation('subjects');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('ALL');
@@ -109,7 +110,8 @@ export default function SubjectsView({ subjects, onOpenNewSubject, onEditSubject
           return (
             <div
               key={subject.id}
-              className="bg-white dark:bg-[#111C32] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-6 group card-hover-effect relative"
+              onClick={() => onSubjectClick && onSubjectClick(subject.id)}
+              className="cursor-pointer bg-white dark:bg-[#111C32] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between space-y-6 group card-hover-effect relative"
             >
               <div className="space-y-4">
                 {/* Icon & 3-dot Menu Header */}
@@ -189,16 +191,30 @@ export default function SubjectsView({ subjects, onOpenNewSubject, onEditSubject
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 font-semibold pt-1">
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold pt-1">
                   <div className="flex items-center gap-1.5">
                     <Folder className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>{subject.totalDocuments} {t('documents')}</span>
+                    <span>{subject.totalDocuments || 0} {t('documents')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FileText className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>{subject.totalNotes} {t('notes')}</span>
+                    <span>{subject.totalNotes || 0} {t('notes')}</span>
                   </div>
                 </div>
+
+                {/* Explicit View Detail Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onSubjectClick && subject.id != null) {
+                      onSubjectClick(subject.id);
+                    }
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-all group-hover:bg-blue-600 group-hover:text-white"
+                >
+                  <span>Xem chi tiết môn học</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           );

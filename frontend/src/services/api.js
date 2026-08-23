@@ -333,29 +333,78 @@ export async function deleteDocumentApi(id) {
   });
 }
 
-// ── 8. AI GEMINI INTEGRATION API ────────────────────────
-export async function summarizeNoteApi(noteId) {
-  return await request(`/notes/${noteId}/summarize`, { method: 'POST' });
+// ── 8. AI GEMINI INTEGRATION API (Instant + Async Polling) ──────────
+export async function generateQuizFromNoteApi(noteId, config) {
+  const jobRes = await request(`/jobs/notes/${noteId}/quiz`, { 
+    method: 'POST',
+    body: JSON.stringify(config)
+  });
+  if (jobRes && jobRes.success && jobRes.data?.jobId) {
+    return await pollJobUntilDone(jobRes.data.jobId);
+  }
+  return { success: false, message: 'Failed to start AI job' };
 }
 
-export async function generateQuizFromNoteApi(noteId, count = 5) {
-  return await request(`/notes/${noteId}/quiz?numberOfQuestions=${count}`, { method: 'POST' });
+export async function generateMindmapFromNoteApi(noteId, config) {
+  const jobRes = await request(`/jobs/notes/${noteId}/mindmap`, { 
+    method: 'POST',
+    body: JSON.stringify(config)
+  });
+  if (jobRes && jobRes.success && jobRes.data?.jobId) {
+    return await pollJobUntilDone(jobRes.data.jobId);
+  }
+  return { success: false, message: 'Failed to start AI job' };
 }
 
-export async function generateMindmapFromNoteApi(noteId) {
-  return await request(`/notes/${noteId}/mindmap`, { method: 'POST' });
+export async function summarizeNoteApi(noteId, config) {
+  const jobRes = await request(`/jobs/notes/${noteId}/summarize`, { 
+    method: 'POST',
+    body: JSON.stringify(config)
+  });
+  if (jobRes && jobRes.success && jobRes.data?.jobId) {
+    return await pollJobUntilDone(jobRes.data.jobId);
+  }
+  return { success: false, message: 'Failed to start AI job' };
 }
 
-export async function summarizeDocumentApi(docId) {
-  return await request(`/documents/${docId}/summarize`, { method: 'POST' });
+export async function generateQuizFromDocApi(docId, config) {
+  const jobRes = await request(`/jobs/documents/${docId}/quiz`, { 
+    method: 'POST',
+    body: JSON.stringify(config)
+  });
+  if (jobRes && jobRes.success && jobRes.data?.jobId) {
+    return await pollJobUntilDone(jobRes.data.jobId);
+  }
+  return { success: false, message: 'Failed to start AI job' };
 }
 
-export async function generateQuizFromDocApi(docId, count = 5) {
-  return await request(`/documents/${docId}/quiz?numberOfQuestions=${count}`, { method: 'POST' });
+export async function generateMindmapFromDocApi(docId, config) {
+  const jobRes = await request(`/jobs/documents/${docId}/mindmap`, { 
+    method: 'POST',
+    body: JSON.stringify(config)
+  });
+  if (jobRes && jobRes.success && jobRes.data?.jobId) {
+    return await pollJobUntilDone(jobRes.data.jobId);
+  }
+  return { success: false, message: 'Failed to start AI job' };
 }
 
-export async function generateMindmapFromDocApi(docId) {
-  return await request(`/documents/${docId}/mindmap`, { method: 'POST' });
+export async function summarizeDocumentApi(docId, config) {
+  const jobRes = await request(`/jobs/documents/${docId}/summarize`, { 
+    method: 'POST',
+    body: JSON.stringify(config)
+  });
+  if (jobRes && jobRes.success && jobRes.data?.jobId) {
+    return await pollJobUntilDone(jobRes.data.jobId);
+  }
+  return { success: false, message: 'Failed to start AI job' };
+}
+
+export async function saveAiOutputApi(type, payload) {
+  return await request(`/ai-outputs/${type}/save`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function getQuizByIdApi(quizId) {
@@ -371,4 +420,65 @@ export async function attemptQuizApi(quizId, userAnswers) {
 
 export async function getMindmapByIdApi(mindmapId) {
   return await request(`/mindmaps/${mindmapId}`);
+}
+
+// ── 8.5. MEMO (Ghi chú) API ──────────────────────────────────
+export async function getMemosApi(date, taskId, subjectId) {
+  const params = new URLSearchParams();
+  if (date) params.append('date', date);
+  if (taskId) params.append('taskId', taskId);
+  if (subjectId) params.append('subjectId', subjectId);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return await request(`/memos${query}`);
+}
+
+export async function createMemoApi(memoData) {
+  return await request('/memos', {
+    method: 'POST',
+    body: JSON.stringify(memoData),
+  });
+}
+
+export async function updateMemoApi(id, memoData) {
+  return await request(`/memos/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(memoData),
+  });
+}
+
+export async function deleteMemoApi(id) {
+  return await request(`/memos/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+
+// ── 9. ASYNC JOB POLLING API ────────────────────────────
+export async function getJobStatusApi(jobId) {
+  return await request(`/jobs/${jobId}`);
+}
+
+export async function pollJobUntilDone(jobId, intervalMs = 2000, maxAttempts = 30) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await getJobStatusApi(jobId);
+    if (res && res.success && res.data) {
+      const { status, resultJson, errorMessage } = res.data;
+      if (status === 'COMPLETED') {
+        try {
+          return { success: true, data: JSON.parse(resultJson) };
+        } catch (e) {
+          return { success: true, data: resultJson };
+        }
+      }
+      if (status === 'FAILED') {
+        return { success: false, message: errorMessage || 'Xử lý AI thất bại, vui lòng thử lại.' };
+      }
+    }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  return { success: false, message: 'Tác vụ AI xử lý quá lâu, vui lòng kiểm tra lại sau.' };
+}
+
+export async function getAiOutputsBySubjectApi(subjectId) {
+  return await request(`/ai-outputs/subjects/${subjectId}`);
 }

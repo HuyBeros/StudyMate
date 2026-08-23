@@ -1,0 +1,46 @@
+{
+  "title": "Study Statistics",
+  "subtitle": "Track your learning progress and performance",
+  "aiInsight": "AI Insight",
+  "aiInsightText": "Based on your recent study data, you should focus on subjects with low completion rates and spend more time reviewing quizzes with low scores.",
+  "generateInsight": "View Detailed Insights →",
+
+  "cards": {
+    "studyHours": "Study Hours This Week",
+    "totalTasks": "Total Tasks",
+    "totalSubjects": "Total Subjects",
+    "streak": "Study Streak",
+    "completion": "Completion",
+    "days": "days"
+  },
+
+  "charts": {
+    "studyHoursTitle": "Daily Study Hours",
+    "studyHoursDesc": "Compare study time across the week",
+    "taskCompletionTitle": "Task Status",
+    "taskCompletionDesc": "Task status distribution",
+    "subjectMasteryTitle": "Subject Mastery",
+    "subjectMasteryDesc": "Task completion rate per subject",
+    "quizPerformanceTitle": "Quiz Performance",
+    "quizPerformanceDesc": "Average scores over time"
+  },
+
+  "taskStatus": {
+    "todo": "To Do",
+    "doing": "In Progress",
+    "done": "Completed"
+  },
+
+  "weekDays": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+
+  "noData": "No statistics data yet",
+  "noDataHint": "Start using the app to see your data here"
+}

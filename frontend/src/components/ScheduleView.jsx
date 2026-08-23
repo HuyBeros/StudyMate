@@ -18,7 +18,13 @@ import {
   Trash2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { updateTaskStatusApi, deleteTaskApi } from '../services/api';
+import { 
+  updateTaskStatusApi, 
+  deleteTaskApi,
+  getMemosApi,
+  createMemoApi,
+  deleteMemoApi
+} from '../services/api';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -77,12 +83,35 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
   const [weekStart, setWeekStart] = useState(() => getStartOfWeek(today));
   const [selectedDay, setSelectedDay] = useState(() => today);
   const [taskList, setTaskList] = useState(tasks);
+  const [memos, setMemos] = useState([]);
+  const [newMemoText, setNewMemoText] = useState('');
+  const [isAddingMemo, setIsAddingMemo] = useState(false);
   const dateInputRef = useRef(null);
 
   // Sync taskList khi prop tasks thay đổi
   React.useEffect(() => {
     setTaskList(tasks);
   }, [tasks]);
+
+  // Fetch memos khi selectedDay thay đổi
+  React.useEffect(() => {
+    const fetchMemos = async () => {
+      const dateStr = [
+        selectedDay.getFullYear(),
+        String(selectedDay.getMonth() + 1).padStart(2, '0'),
+        String(selectedDay.getDate()).padStart(2, '0')
+      ].join('-');
+      try {
+        const res = await getMemosApi(dateStr, null, null);
+        if (res && res.success) {
+          setMemos(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch memos", err);
+      }
+    };
+    fetchMemos();
+  }, [selectedDay]);
 
   const weekDays = useMemo(() => buildWeekDays(weekStart), [weekStart]);
 
@@ -137,6 +166,40 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
       if (onReload) onReload();
     } catch (e) {
       console.error("Toggle task error:", e);
+    }
+  };
+
+  const handleAddMemo = async () => {
+    if (!newMemoText.trim()) return;
+    const dateStr = [
+      selectedDay.getFullYear(),
+      String(selectedDay.getMonth() + 1).padStart(2, '0'),
+      String(selectedDay.getDate()).padStart(2, '0')
+    ].join('-');
+
+    try {
+      const res = await createMemoApi({
+        content: newMemoText,
+        date: dateStr
+      });
+      if (res && res.success) {
+        setMemos(prev => [res.data, ...prev]);
+        setNewMemoText('');
+        setIsAddingMemo(false);
+      }
+    } catch (err) {
+      console.error("Add memo error:", err);
+    }
+  };
+
+  const handleDeleteMemo = async (memoId) => {
+    try {
+      const res = await deleteMemoApi(memoId);
+      if (res && res.success) {
+        setMemos(prev => prev.filter(m => m.id !== memoId));
+      }
+    } catch (err) {
+      console.error("Delete memo error:", err);
     }
   };
 
@@ -375,6 +438,62 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
               </p>
             </div>
           )}
+
+          {/* Memos Container */}
+          <div className="bg-yellow-50/50 dark:bg-[#1f1a10] rounded-3xl p-6 border border-yellow-200/50 dark:border-yellow-900/50 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-yellow-50 flex items-center gap-2">
+                <span>📝</span>
+                Ghi chú
+              </h3>
+              <button
+                onClick={() => setIsAddingMemo(!isAddingMemo)}
+                className="text-xs font-bold text-yellow-600 dark:text-yellow-400 hover:underline font-['Inter']"
+              >
+                + Thêm mới
+              </button>
+            </div>
+
+            {isAddingMemo && (
+              <div className="flex flex-col gap-2 bg-white dark:bg-[#111C32] p-3 rounded-2xl border border-yellow-200 dark:border-yellow-800">
+                <textarea
+                  value={newMemoText}
+                  onChange={(e) => setNewMemoText(e.target.value)}
+                  placeholder="Link bài viết, nhắc nhở ngắn gọn..."
+                  className="w-full bg-transparent text-sm text-slate-700 dark:text-slate-300 outline-none resize-none"
+                  rows={2}
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2 mt-1">
+                  <button onClick={() => { setIsAddingMemo(false); setNewMemoText(''); }} className="px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Hủy</button>
+                  <button onClick={handleAddMemo} className="px-3 py-1 text-xs font-bold text-white bg-yellow-500 hover:bg-yellow-600 rounded-lg shadow-sm">Lưu</button>
+                </div>
+              </div>
+            )}
+
+            {memos.length === 0 && !isAddingMemo ? (
+              <div className="flex flex-col items-center justify-center py-4 opacity-70">
+                <p className="text-xs font-medium text-slate-400">Chưa có ghi chú nào trong ngày này</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {memos.map((memo) => (
+                  <div key={memo.id} className="relative group p-4 rounded-2xl bg-white dark:bg-[#1a1712] border border-yellow-100 dark:border-yellow-900/50 shadow-sm flex gap-3 items-start hover:border-yellow-300 dark:hover:border-yellow-700 transition-colors">
+                    <span className="text-lg leading-none select-none">📌</span>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap flex-1 mt-0.5">
+                      {memo.content}
+                    </p>
+                    <button 
+                      onClick={() => handleDeleteMemo(memo.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-all rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Column: Detailed Timetable Timeline */}

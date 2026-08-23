@@ -4,6 +4,7 @@ import {
   BookOpen, 
   Calendar, 
   Sparkles, 
+  BarChart3,
   User, 
   Plus, 
   Settings, 
@@ -19,8 +20,9 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
     { id: 'dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
     { id: 'subjects',  labelKey: 'nav.subjects',  icon: BookOpen },
     { id: 'schedule',  labelKey: 'nav.schedule',  icon: Calendar },
-    { id: 'ai-tutor',  labelKey: 'nav.aiTutor',   icon: Sparkles, badge: 'AI' },
-    { id: 'profile',   labelKey: 'nav.profile',   icon: User },
+    { id: 'ai-tutor',    labelKey: 'nav.aiTutor',     icon: Sparkles, badge: 'AI' },
+    { id: 'statistics', labelKey: 'nav.statistics', icon: BarChart3 },
+    { id: 'profile',    labelKey: 'nav.profile',     icon: User },
   ];
 
   return (
@@ -45,7 +47,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
         <nav className="space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = activeTab === item.id || (item.id === 'subjects' && activeTab === 'subject-detail');
             return (
               <button
                 key={item.id}

@@ -9,6 +9,7 @@ import dashboardVi from './locales/vi/dashboard.json';
 import scheduleVi  from './locales/vi/schedule.json';
 import subjectsVi  from './locales/vi/subjects.json';
 import aiVi        from './locales/vi/ai.json';
+import statisticsVi from './locales/vi/statistics.json';
 
 import commonEn    from './locales/en/common.json';
 import authEn      from './locales/en/auth.json';
@@ -16,6 +17,7 @@ import dashboardEn from './locales/en/dashboard.json';
 import scheduleEn  from './locales/en/schedule.json';
 import subjectsEn  from './locales/en/subjects.json';
 import aiEn        from './locales/en/ai.json';
+import statisticsEn from './locales/en/statistics.json';
 
 // ── Supported languages ────────────────────────────────────────────────────
 export const SUPPORTED_LANGUAGES = [
@@ -36,6 +38,7 @@ i18n
         schedule:  scheduleVi,
         subjects:  subjectsVi,
         ai:        aiVi,
+        statistics: statisticsVi,
       },
       en: {
         common:    commonEn,
@@ -44,10 +47,11 @@ i18n
         schedule:  scheduleEn,
         subjects:  subjectsEn,
         ai:        aiEn,
+        statistics: statisticsEn,
       },
     },
 
-    ns: ['common', 'auth', 'dashboard', 'schedule', 'subjects', 'ai'],
+    ns: ['common', 'auth', 'dashboard', 'schedule', 'subjects', 'ai', 'statistics'],
     defaultNS: 'common',
     fallbackLng: 'vi',
 

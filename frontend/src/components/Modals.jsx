@@ -275,10 +275,15 @@ export function SummaryModal({ isOpen, onClose, title = "Tài liệu học tập
 
   const fetchNoteSummary = async () => {
     setLoading(true);
+    setSummaryText('');
     try {
       const res = await summarizeNoteApi(noteId);
       if (res && res.success && res.data) {
-        setSummaryText(res.data.summaryText || res.data);
+        // res.data = { summary: '...' } from async job polling
+        const text = res.data.summary || res.data.summaryText || (typeof res.data === 'string' ? res.data : '');
+        setSummaryText(text || 'Không có nội dung tóm tắt.');
+      } else {
+        setSummaryText(`❌ ${res?.message || 'Không thể tạo tóm tắt từ AI.'}`);
       }
     } catch (e) {
       setSummaryText('Không thể lấy tóm tắt từ AI.');
@@ -289,10 +294,14 @@ export function SummaryModal({ isOpen, onClose, title = "Tài liệu học tập
 
   const fetchDocSummary = async () => {
     setLoading(true);
+    setSummaryText('');
     try {
       const res = await summarizeDocumentApi(docId);
       if (res && res.success && res.data) {
-        setSummaryText(res.data.summaryText || res.data);
+        const text = res.data.summary || res.data.summaryText || (typeof res.data === 'string' ? res.data : '');
+        setSummaryText(text || 'Không có nội dung tóm tắt.');
+      } else {
+        setSummaryText(`❌ ${res?.message || 'Không thể tạo tóm tắt từ AI.'}`);
       }
     } catch (e) {
       setSummaryText('Không thể lấy tóm tắt từ AI.');
