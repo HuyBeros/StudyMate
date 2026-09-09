@@ -79,4 +79,16 @@ public class ScheduleSlotController {
         scheduleSlotService.deleteSlot(id);
         return ResponseEntity.ok(ApiResponse.ok("Schedule slot deleted", null));
     }
+
+    /**
+     * GET /api/schedule/export/ics — Xuất TKB sang file iCalendar (.ics) cho Google / Apple Calendar
+     */
+    @GetMapping(value = "/export/ics", produces = "text/calendar;charset=UTF-8")
+    public ResponseEntity<byte[]> exportIcs() {
+        String icsContent = scheduleSlotService.exportCalendarIcs();
+        byte[] bytes = icsContent.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"studymate-schedule.ics\"")
+                .body(bytes);
+    }
 }

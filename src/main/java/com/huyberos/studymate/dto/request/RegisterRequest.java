@@ -13,7 +13,11 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    @jakarta.validation.constraints.Pattern(
+            regexp = "^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+            message = "Password must contain at least 1 uppercase letter, 1 digit, and 1 special character (@$!%*?&)"
+    )
     private String password;
 
     @NotBlank(message = "Full name is required")

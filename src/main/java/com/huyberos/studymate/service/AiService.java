@@ -2,7 +2,8 @@ package com.huyberos.studymate.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.huyberos.studymate.ai.GeminiClient;
+import com.huyberos.studymate.ai.AiRouter;
+import com.huyberos.studymate.util.AiTextUtil;
 import com.huyberos.studymate.dto.request.QuizAttemptRequest;
 import com.huyberos.studymate.dto.response.MindmapResponse;
 import com.huyberos.studymate.dto.response.QuizAttemptResponse;
@@ -26,7 +27,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AiService {
 
-    private final GeminiClient geminiClient;
+    private final AiRouter aiRouter;
     private final NoteRepository noteRepository;
     private final DocumentRepository documentRepository;
     private final QuizRepository quizRepository;
@@ -57,7 +58,7 @@ public class AiService {
                 %s
                 """.formatted(note.getTitle(), note.getContent());
 
-        String summary = geminiClient.generateContent(prompt, false);
+        String summary = aiRouter.generateContent(prompt, false);
         note.setAiSummary(summary);
         noteRepository.save(note);
         return summary;
@@ -80,9 +81,9 @@ public class AiService {
                 Tên tài liệu: %s
                 Nội dung:
                 %s
-                """.formatted(doc.getFileName(), truncateContent(doc.getExtractedText(), 15000));
+                """.formatted(doc.getFileName(), AiTextUtil.truncateContent(doc.getExtractedText(), 15000));
 
-        return geminiClient.generateContent(prompt, false);
+        return aiRouter.generateContent(prompt, false);
     }
 
     // ── Quiz Generation ────────────────────────────────────
@@ -129,9 +130,9 @@ public class AiService {
 
                 Nội dung tài liệu/bài học:
                 %s
-                """.formatted(numQ, truncateContent(content, 15000));
+                """.formatted(numQ, AiTextUtil.truncateContent(content, 15000));
 
-        String jsonResponse = geminiClient.generateContent(prompt, true);
+        String jsonResponse = aiRouter.generateContent(prompt, true);
 
         try {
             List<Map<String, String>> rawQuestions = objectMapper.readValue(jsonResponse, new TypeReference<>() {});
@@ -146,7 +147,7 @@ public class AiService {
 
             List<QuizQuestion> questionEntities = new ArrayList<>();
             for (Map<String, String> qMap : rawQuestions) {
-                CorrectOption correctOpt = parseCorrectOption(qMap.get("correctOption"));
+                CorrectOption correctOpt = AiTextUtil.parseCorrectOption(qMap.get("correctOption"));
 
                 QuizQuestion q = QuizQuestion.builder()
                         .quiz(savedQuiz)
@@ -217,9 +218,9 @@ public class AiService {
 
                 Nội dung tài liệu/bài học:
                 %s
-                """.formatted(truncateContent(content, 15000));
+                """.formatted(AiTextUtil.truncateContent(content, 15000));
 
-        String jsonResponse = geminiClient.generateContent(prompt, true);
+        String jsonResponse = aiRouter.generateContent(prompt, true);
 
         try {
             Map<String, Object> structure = objectMapper.readValue(jsonResponse, new TypeReference<>() {});
@@ -298,20 +299,5 @@ public class AiService {
         return MindmapResponse.fromEntity(mindmap);
     }
 
-    // ── Helpers ────────────────────────────────────────────
-
-    private String truncateContent(String text, int maxLength) {
-        if (text.length() <= maxLength) return text;
-        return text.substring(0, maxLength) + "\n...[Nội dung đã cắt bớt]";
-    }
-
-    private CorrectOption parseCorrectOption(String str) {
-        if (str == null) return CorrectOption.A;
-        String clean = str.trim().toUpperCase();
-        try {
-            return CorrectOption.valueOf(clean);
-        } catch (IllegalArgumentException e) {
-            return CorrectOption.A;
-        }
-    }
+    // ── Helpers (moved to AiTextUtil) ──────────────────────
 }

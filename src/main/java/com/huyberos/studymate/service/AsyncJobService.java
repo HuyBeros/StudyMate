@@ -2,11 +2,9 @@ package com.huyberos.studymate.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.huyberos.studymate.ai.GeminiClient;
-import com.huyberos.studymate.dto.response.MindmapResponse;
-import com.huyberos.studymate.dto.response.QuizResponse;
+import com.huyberos.studymate.ai.AiRouter;
+import com.huyberos.studymate.util.AiTextUtil;
 import com.huyberos.studymate.entity.*;
-import com.huyberos.studymate.entity.enums.CorrectOption;
 import com.huyberos.studymate.entity.enums.JobStatus;
 import com.huyberos.studymate.entity.enums.SourceType;
 import com.huyberos.studymate.dto.request.AiConfigRequest;
@@ -14,15 +12,10 @@ import com.huyberos.studymate.exception.ResourceNotFoundException;
 import com.huyberos.studymate.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 @Slf4j
@@ -32,14 +25,13 @@ public class AsyncJobService {
 
     private final AsyncJobRepository asyncJobRepository;
     private final JobStatusService jobStatusService;   // <- dùng bean riêng để cập nhật status
-    private final GeminiClient geminiClient;
+    private final AiRouter aiRouter;
     private final NoteRepository noteRepository;
     private final DocumentRepository documentRepository;
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final MindmapRepository mindmapRepository;
     private final ObjectMapper objectMapper;
-    private final CacheManager cacheManager;
 
     /**
      * Khởi tạo một AsyncJob mới với UUID.
@@ -104,9 +96,9 @@ public class AsyncJobService {
 
                     Nội dung tài liệu/bài học:
                     %s
-                    """.formatted(numQ, lang, diff, focus, truncateContent(content, 15000));
+                    """.formatted(numQ, lang, diff, focus, AiTextUtil.truncateContent(content, 15000));
 
-            String jsonResponse = geminiClient.generateContent(prompt, true);
+            String jsonResponse = aiRouter.generateContent(prompt, true);
             List<Map<String, String>> rawQuestions = objectMapper.readValue(jsonResponse, new TypeReference<>() {});
 
             Map<String, Object> result = new HashMap<>();
@@ -157,9 +149,9 @@ public class AsyncJobService {
 
                     Nội dung tài liệu/bài học:
                     %s
-                    """.formatted(lang, focus, truncateContent(content, 15000));
+                    """.formatted(lang, focus, AiTextUtil.truncateContent(content, 15000));
 
-            String jsonResponse = geminiClient.generateContent(prompt, true);
+            String jsonResponse = aiRouter.generateContent(prompt, true);
             Map<String, Object> structure = objectMapper.readValue(jsonResponse, new TypeReference<>() {});
 
             Map<String, Object> result = new HashMap<>();
@@ -198,9 +190,9 @@ public class AsyncJobService {
                     Tiêu đề: %s
                     Nội dung:
                     %s
-                    """.formatted(lang, focus, title, truncateContent(content, 15000));
+                    """.formatted(lang, focus, title, AiTextUtil.truncateContent(content, 15000));
 
-            String summary = geminiClient.generateContent(prompt, false);
+            String summary = aiRouter.generateContent(prompt, false);
 
             Map<String, Object> result = new HashMap<>();
             result.put("title", "Tóm tắt: " + title);
@@ -220,38 +212,5 @@ public class AsyncJobService {
         }
     }
 
-    // ── Helpers ────────────────────────────────────────────
-
-    private String computeContentHash(String content) {
-        if (content == null) return "empty";
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(content.trim().getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            return String.valueOf(content.hashCode());
-        }
-    }
-
-    private String truncateContent(String text, int maxLength) {
-        if (text == null) return "";
-        if (text.length() <= maxLength) return text;
-        return text.substring(0, maxLength) + "\n...[Nội dung đã cắt bớt]";
-    }
-
-    private CorrectOption parseCorrectOption(String str) {
-        if (str == null) return CorrectOption.A;
-        String clean = str.trim().toUpperCase();
-        try {
-            return CorrectOption.valueOf(clean);
-        } catch (IllegalArgumentException e) {
-            return CorrectOption.A;
-        }
-    }
+    // ── Helpers (moved to AiTextUtil) ──────────────────────
 }

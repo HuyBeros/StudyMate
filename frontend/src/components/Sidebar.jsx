@@ -20,7 +20,6 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
     { id: 'dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
     { id: 'subjects',  labelKey: 'nav.subjects',  icon: BookOpen },
     { id: 'schedule',  labelKey: 'nav.schedule',  icon: Calendar },
-    { id: 'ai-tutor',    labelKey: 'nav.aiTutor',     icon: Sparkles, badge: 'AI' },
     { id: 'statistics', labelKey: 'nav.statistics', icon: BarChart3 },
     { id: 'profile',    labelKey: 'nav.profile',     icon: User },
   ];

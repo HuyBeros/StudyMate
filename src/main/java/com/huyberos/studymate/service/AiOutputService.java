@@ -9,6 +9,7 @@ import com.huyberos.studymate.entity.*;
 import com.huyberos.studymate.entity.enums.CorrectOption;
 import com.huyberos.studymate.entity.enums.SourceType;
 import com.huyberos.studymate.repository.*;
+import com.huyberos.studymate.util.AiTextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,7 +42,7 @@ public class AiOutputService {
 
         List<QuizQuestion> questionEntities = new ArrayList<>();
         for (Map<String, String> qMap : request.getQuestions()) {
-            CorrectOption correctOpt = parseCorrectOption(qMap.get("correctOption"));
+            CorrectOption correctOpt = AiTextUtil.parseCorrectOption(qMap.get("correctOption"));
             QuizQuestion q = QuizQuestion.builder()
                     .quiz(savedQuiz)
                     .questionText(qMap.get("questionText"))
@@ -137,15 +138,5 @@ public class AiOutputService {
         result.put("summaries", summaries);
 
         return result;
-    }
-
-    private CorrectOption parseCorrectOption(String str) {
-        if (str == null) return CorrectOption.A;
-        String clean = str.trim().toUpperCase();
-        try {
-            return CorrectOption.valueOf(clean);
-        } catch (IllegalArgumentException e) {
-            return CorrectOption.A;
-        }
     }
 }

@@ -4,7 +4,6 @@ import Header from './components/Header';
 import DashboardView from './components/DashboardView';
 import SubjectsView from './components/SubjectsView';
 import ScheduleView from './components/ScheduleView';
-import AiTutorView from './components/AiTutorView';
 import StatisticsView from './components/StatisticsView';
 import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
@@ -157,9 +156,12 @@ export default function App() {
     }
   };
 
+  const [scheduleDefaultDay, setScheduleDefaultDay] = useState(null);
+
   // Handlers for Schedule Edit & Delete
-  const handleOpenNewSchedule = () => {
+  const handleOpenNewSchedule = (defaultDay = null) => {
     setScheduleSlotToEdit(null);
+    setScheduleDefaultDay(defaultDay);
     setIsCreateScheduleOpen(true);
   };
 
@@ -270,7 +272,6 @@ export default function App() {
               }}
               onNavigate={(tab) => setActiveTab(tab)}
               onOpenNewSubject={() => setIsCreateTaskOpen(true)}
-              onOpenAiTutor={() => setActiveTab('ai-tutor')}
               onSubjectClick={(id) => {
                 setActiveSubjectId(id);
                 setActiveTab('subject-detail');
@@ -358,37 +359,11 @@ export default function App() {
               onEditSchedule={handleEditSchedule}
               onDeleteSchedule={handleDeleteSchedule}
               onOpenImportSchedule={() => setIsImportScheduleOpen(true)}
-              onOpenAiTutor={() => setActiveTab('ai-tutor')}
               onReload={() => loadData()}
             />
           )}
 
-          {activeTab === 'ai-tutor' && (
-            <AiTutorView
-              onOpenQuizModal={(noteId, docId) => {
-                setActiveNoteOrDoc(noteId ? 'note' : 'doc');
-                setActiveNoteId(noteId || null);
-                setActiveDocId(docId || null);
-                setAiGenerateType('quiz');
-                setIsAiGenerateModalOpen(true);
-              }}
-              onOpenMindmapModal={(noteId, docId) => {
-                setActiveNoteOrDoc(noteId ? 'note' : 'doc');
-                setActiveNoteId(noteId || null);
-                setActiveDocId(docId || null);
-                setAiGenerateType('mindmap');
-                setIsAiGenerateModalOpen(true);
-              }}
-              onOpenSummaryModal={(noteId, docId) => {
-                setActiveNoteOrDoc(noteId ? 'note' : 'doc');
-                setActiveNoteId(noteId || null);
-                setActiveDocId(docId || null);
-                setAiGenerateType('summary');
-                setIsAiGenerateModalOpen(true);
-              }}
-              onReload={() => loadData()}
-            />
-          )}
+
 
           {activeTab === 'statistics' && (
             <StatisticsView 
@@ -396,7 +371,6 @@ export default function App() {
               subjects={subjects}
               tasks={tasks}
               schedule={schedule}
-              onOpenAiTutor={() => setActiveTab('ai-tutor')}
             />
           )}
 
@@ -534,9 +508,11 @@ export default function App() {
         onClose={() => {
           setIsCreateScheduleOpen(false);
           setScheduleSlotToEdit(null);
+          setScheduleDefaultDay(null);
         }} 
         subjects={subjects}
         slotToEdit={scheduleSlotToEdit}
+        defaultDay={scheduleDefaultDay}
         onAddSlot={() => loadData()}
       />
       <ImportScheduleModal

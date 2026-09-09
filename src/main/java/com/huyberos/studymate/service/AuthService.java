@@ -12,6 +12,7 @@ import com.huyberos.studymate.exception.ResourceNotFoundException;
 import com.huyberos.studymate.repository.RefreshTokenRepository;
 import com.huyberos.studymate.repository.UserRepository;
 import com.huyberos.studymate.security.jwt.JwtUtil;
+import com.huyberos.studymate.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +35,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final SecurityUtil securityUtil;
 
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration; // ms
@@ -120,7 +122,7 @@ public class AuthService {
                 log.info("[OAuth2 Login] Creating new user: email={}, provider={}", email, provider);
                 User newUser = User.builder()
                         .email(email)
-                        .passwordHash("")
+                        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .fullName(request.getFullName() != null ? request.getFullName() : email.split("@")[0])
                         .avatarUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : "")
                         .provider(provider)
@@ -133,12 +135,13 @@ public class AuthService {
 
         } catch (Exception e) {
             log.error("[OAuth2 Login] FAILED for email={}: {}", email, e.getMessage(), e);
-            throw new RuntimeException("OAuth2 login failed: " + e.getMessage(), e);
+            throw new BadRequestException("OAuth2 login failed. Please try again.");
         }
     }
 
     @Transactional
-    public AuthResponse updateProfile(Long userId, com.huyberos.studymate.dto.request.UserProfileRequest request) {
+    public AuthResponse updateProfile(com.huyberos.studymate.dto.request.UserProfileRequest request) {
+        Long userId = securityUtil.getCurrentUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 

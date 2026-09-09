@@ -2,9 +2,7 @@ package com.huyberos.studymate.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.huyberos.studymate.ai.GeminiClient;
-import com.huyberos.studymate.ai.OpenAiClient;
-import com.huyberos.studymate.ai.GroqClient;
+import com.huyberos.studymate.ai.AiRouter;
 import com.huyberos.studymate.dto.request.ConflictCheckRequest;
 import com.huyberos.studymate.dto.request.ImportConfirmRequest;
 import com.huyberos.studymate.dto.response.ConflictCheckResponse;
@@ -35,9 +33,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ScheduleImportService {
 
-    private final GeminiClient geminiClient;
-    private final OpenAiClient openAiClient;
-    private final GroqClient groqClient;
+    private final AiRouter aiRouter;
     private final ScheduleSlotRepository scheduleSlotRepository;
     private final SubjectRepository subjectRepository;
     private final UserRepository userRepository;
@@ -84,23 +80,13 @@ public class ScheduleImportService {
             throw new BadRequestException("Không thể đọc dữ liệu file tải lên");
         }
 
-        String rawJson = null;
+        String rawJson;
         try {
-            log.info("Attempting to parse schedule image using Gemini...");
-            rawJson = geminiClient.generateContentWithImage(prompt, file.getContentType(), bytes, true);
+            log.info("Attempting to parse schedule image using AI Router...");
+            rawJson = aiRouter.generateContentWithImage(prompt, file.getContentType(), bytes, true);
         } catch (Exception e) {
-            log.warn("Gemini API failed or rate limited, falling back to OpenAI: {}", e.getMessage());
-            try {
-                rawJson = openAiClient.generateContentWithImage(prompt, file.getContentType(), bytes, true);
-            } catch (Exception ex) {
-                log.warn("OpenAI API failed, falling back to Groq: {}", ex.getMessage());
-                try {
-                    rawJson = groqClient.generateContentWithImage(prompt, file.getContentType(), bytes, true);
-                } catch (Exception ex2) {
-                    log.error("All AI engines (Gemini, OpenAI, Groq) failed to parse schedule image", ex2);
-                    throw new BadRequestException("Cả Gemini, OpenAI và Groq đều thất bại khi nhận diện ảnh: " + ex2.getMessage());
-                }
-            }
+            log.error("All AI engines failed to parse schedule image", e);
+            throw new BadRequestException("AI không thể nhận diện ảnh thời khóa biểu: " + e.getMessage());
         }
 
         try {

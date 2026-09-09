@@ -141,4 +141,87 @@ public class ScheduleSlotService {
             case SUNDAY -> DayOfWeek.CHU_NHAT;
         };
     }
+
+    /**
+     * Xuất toàn bộ thời khóa biểu của người dùng sang file định dạng chuẩn RFC 5545 iCalendar (.ics)
+     * Tương thích với Google Calendar, Apple Calendar, Microsoft Outlook.
+     */
+    @Transactional(readOnly = true)
+    public String exportCalendarIcs() {
+        Long userId = securityUtil.getCurrentUserId();
+        List<ScheduleSlot> slots = scheduleSlotRepository.findAllByUserId(userId);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("BEGIN:VCALENDAR\r\n");
+        sb.append("VERSION:2.0\r\n");
+        sb.append("PRODID:-//StudyMate//Study Schedule//VI\r\n");
+        sb.append("CALSCALE:GREGORIAN\r\n");
+        sb.append("METHOD:PUBLISH\r\n");
+        sb.append("X-WR-CALNAME:StudyMate - Thời khóa biểu\r\n");
+        sb.append("X-WR-TIMEZONE:Asia/Ho_Chi_Minh\r\n");
+
+        LocalDate today = LocalDate.now();
+        LocalDate monday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HHmmss");
+
+        for (ScheduleSlot slot : slots) {
+            String subjectName = slot.getSubject() != null ? slot.getSubject().getName() : "Môn học";
+            int dayOffset = switch (slot.getDayOfWeek()) {
+                case THU_2 -> 0;
+                case THU_3 -> 1;
+                case THU_4 -> 2;
+                case THU_5 -> 3;
+                case THU_6 -> 4;
+                case THU_7 -> 5;
+                case CHU_NHAT -> 6;
+            };
+
+            LocalDate eventDate = slot.getDate() != null ? slot.getDate() : monday.plusDays(dayOffset);
+            java.time.LocalTime start = slot.getStartTime() != null ? slot.getStartTime() : java.time.LocalTime.of(8, 0);
+            java.time.LocalTime end = slot.getEndTime() != null ? slot.getEndTime() : start.plusMinutes(90);
+
+            String dtStart = eventDate.format(dateFormatter) + "T" + start.format(timeFormatter);
+            String dtEnd = eventDate.format(dateFormatter) + "T" + end.format(timeFormatter);
+
+            sb.append("BEGIN:VEVENT\r\n");
+            sb.append("UID:studymate-slot-").append(slot.getId()).append("@studymate.local\r\n");
+            sb.append("DTSTAMP:").append(today.format(dateFormatter)).append("T000000Z\r\n");
+            sb.append("DTSTART;TZID=Asia/Ho_Chi_Minh:").append(dtStart).append("\r\n");
+            sb.append("DTEND;TZID=Asia/Ho_Chi_Minh:").append(dtEnd).append("\r\n");
+
+            if (Boolean.TRUE.equals(slot.getIsRecurring())) {
+                String byDay = switch (slot.getDayOfWeek()) {
+                    case THU_2 -> "MO";
+                    case THU_3 -> "TU";
+                    case THU_4 -> "WE";
+                    case THU_5 -> "TH";
+                    case THU_6 -> "FR";
+                    case THU_7 -> "SA";
+                    case CHU_NHAT -> "SU";
+                };
+                sb.append("RRULE:FREQ=WEEKLY;BYDAY=").append(byDay).append("\r\n");
+            }
+
+            sb.append("SUMMARY:").append(subjectName.replace(",", "\\,")).append("\r\n");
+            if (slot.getRoom() != null && !slot.getRoom().isBlank()) {
+                sb.append("LOCATION:").append(slot.getRoom().replace(",", "\\,")).append("\r\n");
+            }
+            StringBuilder desc = new StringBuilder();
+            if (slot.getTeacherName() != null && !slot.getTeacherName().isBlank()) {
+                desc.append("Giảng viên: ").append(slot.getTeacherName()).append("\\n");
+            }
+            if (slot.getDepartment() != null && !slot.getDepartment().isBlank()) {
+                desc.append("Khoa/Bộ môn: ").append(slot.getDepartment()).append("\\n");
+            }
+            if (!desc.isEmpty()) {
+                sb.append("DESCRIPTION:").append(desc).append("\r\n");
+            }
+            sb.append("STATUS:CONFIRMED\r\n");
+            sb.append("END:VEVENT\r\n");
+        }
+
+        sb.append("END:VCALENDAR\r\n");
+        return sb.toString();
+    }
 }

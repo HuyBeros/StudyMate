@@ -232,6 +232,26 @@ export async function confirmScheduleImportApi(slots) {
   });
 }
 
+export async function exportScheduleIcsApi() {
+  const token = getAuthToken();
+  const res = await fetch(`${BASE_URL}/schedule/export/ics`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    throw new Error('Lỗi khi tải file lịch học');
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'studymate-schedule.ics';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+  return { success: true };
+}
+
 export async function checkScheduleConflictApi(slotData) {
   return await request('/schedule/check-conflict', {
     method: 'POST',

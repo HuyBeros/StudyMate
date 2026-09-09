@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
@@ -12,6 +12,10 @@ import {
   TrendingUp,
   ChevronRight,
   Play,
+  Pause,
+  RotateCcw,
+  Timer,
+  Coffee,
   CalendarCheck,
   ClipboardList,
   BookOpen,
@@ -22,9 +26,77 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOpenAiTutor, onSubjectClick }) {
+export default function DashboardView({ data, onNavigate, onOpenNewSubject, onSubjectClick }) {
   const { t, i18n } = useTranslation('dashboard');
   const [tasks, setTasks] = useState(data.tasks || []);
+
+  // ── Pomodoro Timer State ──
+  const [pomodoroMode, setPomodoroMode] = useState('WORK'); // 'WORK' | 'SHORT_BREAK' | 'LONG_BREAK'
+  const [pomodoroSeconds, setPomodoroSeconds] = useState(25 * 60);
+  const [isPomodoroRunning, setIsPomodoroRunning] = useState(false);
+  const [completedPomodoros, setCompletedPomodoros] = useState(0);
+
+  const modeTimes = useMemo(() => ({
+    WORK: 25 * 60,
+    SHORT_BREAK: 5 * 60,
+    LONG_BREAK: 15 * 60,
+  }), []);
+
+  const handleSwitchMode = (mode) => {
+    setPomodoroMode(mode);
+    setIsPomodoroRunning(false);
+    setPomodoroSeconds(modeTimes[mode]);
+  };
+
+  const resetPomodoro = () => {
+    setIsPomodoroRunning(false);
+    setPomodoroSeconds(modeTimes[pomodoroMode]);
+  };
+
+  const togglePomodoro = () => {
+    setIsPomodoroRunning(prev => !prev);
+  };
+
+  useEffect(() => {
+    let timer = null;
+    if (isPomodoroRunning) {
+      timer = setInterval(() => {
+        setPomodoroSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setIsPomodoroRunning(false);
+            try {
+              const ctx = new (window.AudioContext || window.webkitAudioContext)();
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.frequency.value = 880;
+              osc.start();
+              gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
+              osc.stop(ctx.currentTime + 1.2);
+            } catch (e) {}
+
+            if (pomodoroMode === 'WORK') {
+              setCompletedPomodoros(c => c + 1);
+              setPomodoroMode('SHORT_BREAK');
+              return modeTimes.SHORT_BREAK;
+            } else {
+              setPomodoroMode('WORK');
+              return modeTimes.WORK;
+            }
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isPomodoroRunning, pomodoroMode, modeTimes]);
+
+  const pMinutes = String(Math.floor(pomodoroSeconds / 60)).padStart(2, '0');
+  const pSeconds = String(pomodoroSeconds % 60).padStart(2, '0');
+  const pTotal = modeTimes[pomodoroMode];
+  const pProgress = ((pTotal - pomodoroSeconds) / pTotal) * 100;
 
   const toggleTask = (id) => {
     setTasks(prev => prev.map(tk => tk.id === id ? { ...tk, completed: !tk.completed } : tk));
@@ -237,6 +309,98 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
         </div>
       </div>
 
+      {/* 3.5. Pomodoro Focus Timer Widget */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-indigo-500/20 shadow-xl relative overflow-hidden">
+        <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+          
+          {/* Left: Info & Mode Switch */}
+          <div className="space-y-3 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold">
+              <Timer className="w-3.5 h-3.5" />
+              <span>Pomodoro Study Focus</span>
+            </div>
+            <h3 className="font-['Be_Vietnam_Pro'] font-bold text-2xl text-white">
+              {pomodoroMode === 'WORK' ? 'Phiên Học Tập Tập Trung' : pomodoroMode === 'SHORT_BREAK' ? 'Nghỉ Ngơi Ngắn' : 'Nghỉ Ngơi Dài'}
+            </h3>
+            <p className="text-slate-300 text-xs max-w-md leading-relaxed">
+              {pomodoroMode === 'WORK'
+                ? 'Gạt bỏ xao nhãng, tắt thông báo và tập trung 100% vào bài học.'
+                : 'Thư giãn mắt, uống một ngụm nước và hít thở sâu để nạp lại năng lượng.'}
+            </p>
+
+            {/* Mode Pills */}
+            <div className="flex items-center justify-center md:justify-start gap-2 pt-1">
+              <button
+                onClick={() => handleSwitchMode('WORK')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  pomodoroMode === 'WORK'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+                    : 'bg-white/10 hover:bg-white/15 text-slate-300'
+                }`}
+              >
+                🎯 Tập trung (25m)
+              </button>
+              <button
+                onClick={() => handleSwitchMode('SHORT_BREAK')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  pomodoroMode === 'SHORT_BREAK'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/30'
+                    : 'bg-white/10 hover:bg-white/15 text-slate-300'
+                }`}
+              >
+                ☕ Nghỉ ngắn (5m)
+              </button>
+              <button
+                onClick={() => handleSwitchMode('LONG_BREAK')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  pomodoroMode === 'LONG_BREAK'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30'
+                    : 'bg-white/10 hover:bg-white/15 text-slate-300'
+                }`}
+              >
+                🌴 Nghỉ dài (15m)
+              </button>
+            </div>
+          </div>
+
+          {/* Center/Right: Timer & Controls */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="font-['Manrope'] font-black text-5xl sm:text-6xl tracking-wider text-white font-mono drop-shadow-md">
+              {pMinutes}:{pSeconds}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={togglePomodoro}
+                className={`px-6 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all hover:scale-105 active:scale-95 ${
+                  isPomodoroRunning
+                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30'
+                }`}
+              >
+                {isPomodoroRunning ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                <span>{isPomodoroRunning ? 'Tạm dừng' : 'Bắt đầu'}</span>
+              </button>
+
+              <button
+                onClick={resetPomodoro}
+                title="Đặt lại thời gian"
+                className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-slate-300 transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {completedPomodoros > 0 && (
+              <span className="text-[11px] text-indigo-300 font-semibold mt-1">
+                🍅 Đã hoàn thành {completedPomodoros} phiên hôm nay!
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* 4. Tasks Section */}
       <div className="bg-white dark:bg-[#111C32] rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
         <div className="flex items-center justify-between mb-4">
@@ -290,31 +454,7 @@ export default function DashboardView({ data, onNavigate, onOpenNewSubject, onOp
         )}
       </div>
 
-      {/* 5. AI Tutor Suggestion */}
-      <div
-        onClick={onOpenAiTutor}
-        className="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 dark:from-[#111C32] dark:via-blue-950/40 dark:to-[#111C32] border border-blue-200/80 dark:border-blue-900/50 rounded-3xl p-6 cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 transition-all group flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-      >
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/30 group-hover:scale-110 transition-transform">
-            <Sparkles className="w-6 h-6 animate-pulse" />
-          </div>
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              {t('aiSuggestion')}
-            </span>
-            <p className="text-slate-700 dark:text-slate-300 text-sm italic font-medium leading-relaxed max-w-3xl">
-              {i18n.language === 'en'
-                ? "Let AI Tutor analyze your study documents, generate quizzes, and build mindmaps for faster learning!"
-                : "Hãy để AI Tutor phân tích tài liệu học tập, tạo bộ câu hỏi ôn tập và vẽ sơ đồ tư duy giúp bạn học nhanh hơn!"}
-            </p>
-          </div>
-        </div>
-        <button className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-sm hover:text-blue-700 shrink-0 group-hover:translate-x-1 transition-transform">
-          <span>{t('viewDetailSuggestion')}</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
+
 
       {/* 6. My Subjects Section */}
       <div className="space-y-4">

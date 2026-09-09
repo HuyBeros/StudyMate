@@ -97,7 +97,7 @@ public class AuthController {
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<AuthResponse>> updateProfile(
             @Valid @RequestBody com.huyberos.studymate.dto.request.UserProfileRequest request) {
-        AuthResponse response = authService.updateProfile(securityUtil.getCurrentUserId(), request);
+        AuthResponse response = authService.updateProfile(request);
         return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully", response));
     }
 

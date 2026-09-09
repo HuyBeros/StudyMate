@@ -172,7 +172,7 @@ function KnowledgeCaptureHeatmap({ tasks = [], schedule = [] }) {
   );
 }
 
-export default function StatisticsView({ stats, subjects = [], tasks = [], schedule = [], onOpenAiTutor }) {
+export default function StatisticsView({ stats, subjects = [], tasks = [], schedule = [] }) {
   const { t } = useTranslation('statistics');
 
   // ── Compute study hours per day (from schedule slots) ──
@@ -295,24 +295,6 @@ export default function StatisticsView({ stats, subjects = [], tasks = [], sched
           </p>
         </div>
 
-        {/* AI Insight Card */}
-        <div
-          onClick={onOpenAiTutor}
-          className="lg:w-96 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-3xl p-5 shadow-lg shadow-blue-500/20 cursor-pointer hover:shadow-xl transition-all group relative overflow-hidden"
-        >
-          <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform"></div>
-          <div className="relative z-10 space-y-3">
-            <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-blue-100">
-              <Sparkles className="w-3.5 h-3.5" />
-              {t('aiInsight')}
-            </div>
-            <p className="text-blue-50 text-xs leading-relaxed line-clamp-2">{t('aiInsightText')}</p>
-            <button className="text-xs font-bold text-white/90 hover:text-white flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-              {t('generateInsight')}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 2. Stats Overview Cards */}

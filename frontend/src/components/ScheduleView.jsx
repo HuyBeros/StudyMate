@@ -15,7 +15,8 @@ import {
   ClipboardList,
   CalendarDays,
   Pencil,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -23,7 +24,8 @@ import {
   deleteTaskApi,
   getMemosApi,
   createMemoApi,
-  deleteMemoApi
+  deleteMemoApi,
+  exportScheduleIcsApi
 } from '../services/api';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -76,7 +78,7 @@ function isSameDay(a, b) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSession, onOpenNewSchedule, onOpenImportSchedule, onOpenAiTutor, onReload, onEditSchedule, onDeleteSchedule }) {
+export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSession, onOpenNewSchedule, onOpenImportSchedule, onReload, onEditSchedule, onDeleteSchedule }) {
   const { t, i18n } = useTranslation('schedule');
   const today = useMemo(() => new Date(), []);
 
@@ -86,7 +88,19 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
   const [memos, setMemos] = useState([]);
   const [newMemoText, setNewMemoText] = useState('');
   const [isAddingMemo, setIsAddingMemo] = useState(false);
+  const [isExportingIcs, setIsExportingIcs] = useState(false);
   const dateInputRef = useRef(null);
+
+  const handleExportIcs = async () => {
+    setIsExportingIcs(true);
+    try {
+      await exportScheduleIcsApi();
+    } catch (err) {
+      alert('Không thể xuất lịch học lúc này. Vui lòng thử lại sau.');
+    } finally {
+      setIsExportingIcs(false);
+    }
+  };
 
   // Sync taskList khi prop tasks thay đổi
   React.useEffect(() => {
@@ -514,9 +528,18 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
                   <span>Nhập TKB bằng AI</span>
                 </button>
               )}
+              <button
+                onClick={handleExportIcs}
+                disabled={isExportingIcs}
+                title="Đồng bộ sang Google Calendar, Apple Calendar, Outlook"
+                className="text-xs font-['Inter'] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{isExportingIcs ? 'Đang xuất...' : 'Xuất .ics'}</span>
+              </button>
               {onOpenNewSchedule && (
                 <button
-                  onClick={onOpenNewSchedule}
+                  onClick={() => onOpenNewSchedule(mapJsDayToEnum(selectedDay.getDay()))}
                   className="text-xs font-['Inter'] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -612,30 +635,7 @@ export default function ScheduleView({ schedule = [], tasks = [], onOpenNewSessi
         </div>
       </div>
 
-      {/* 4. Bottom AI Schedule Optimizer Banner */}
-      <div
-        onClick={onOpenAiTutor}
-        className="bg-gradient-to-r from-teal-700 via-teal-800 to-teal-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer hover:opacity-95 transition-opacity"
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20">
-            <Sparkles className="w-7 h-7 text-teal-200 animate-pulse" />
-          </div>
-          <div>
-            <h4 className="font-['Be_Vietnam_Pro'] font-bold text-xl">
-              {t('aiOptimizer')}
-            </h4>
-            <p className="text-teal-100 text-sm font-medium">
-              {t('aiOptimizerDesc')}
-            </p>
-          </div>
-        </div>
 
-        <button className="bg-white hover:bg-teal-50 text-teal-900 font-['Inter'] font-bold text-sm py-3.5 px-6 rounded-2xl shadow-md transition-all shrink-0 flex items-center gap-2">
-          <span>{t('askAIButton')}</span>
-          <Sparkles className="w-4 h-4 text-teal-600" />
-        </button>
-      </div>
 
     </div>
   );

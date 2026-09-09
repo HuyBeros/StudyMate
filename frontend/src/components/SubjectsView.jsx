@@ -181,12 +181,18 @@ export default function SubjectsView({ subjects, onOpenNewSubject, onEditSubject
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-slate-500 dark:text-slate-400 font-['Inter']">{t('progress')}</span>
-                    <span className="text-blue-600 dark:text-blue-400 font-['Manrope'] font-bold">{subject.progress}%</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-['Manrope'] font-bold">
+                      {subject.progressPercent ?? subject.progress ?? 0}%
+                      {subject.totalTasks > 0 ? ` (${subject.completedTasks || 0}/${subject.totalTasks} task)` : ''}
+                    </span>
                   </div>
                   <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div 
                       className="h-full rounded-full transition-all duration-500" 
-                      style={{ width: `${subject.progress}%`, backgroundColor: subject.color }}
+                      style={{ 
+                        width: `${Math.min(100, subject.progressPercent ?? subject.progress ?? 0)}%`, 
+                        backgroundColor: subject.color || '#2563EB' 
+                      }}
                     ></div>
                   </div>
                 </div>

@@ -26,6 +26,7 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
   const [submitted, setSubmitted] = useState(false);
   const [attemptResult, setAttemptResult] = useState(null);
   const [error, setError] = useState('');
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes default
 
   useEffect(() => {
     if (isOpen) {
@@ -33,9 +34,26 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
       setSubmitted(false);
       setAttemptResult(null);
       setError('');
+      setTimeLeft(300);
       fetchQuiz();
     }
   }, [isOpen, noteId, docId]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!isOpen || submitted || loading || !quizData) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleSubmitAttempt();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isOpen, submitted, loading, quizData]);
 
   const fetchQuiz = async () => {
     setLoading(true);
@@ -116,6 +134,8 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
 
   const questions = quizData?.questions || [];
   const correctCount = questions.filter(q => selectedAnswers[q.id] === (q.correctAnswer || q.correct)).length;
+  const qMin = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+  const qSec = String(timeLeft % 60).padStart(2, '0');
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -135,9 +155,25 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-500">
-            <X className="w-4 h-4" />
-          </button>
+
+          <div className="flex items-center gap-3">
+            {!submitted && !loading && questions.length > 0 && (
+              <div 
+                title="Thời gian làm bài còn lại"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-xs font-bold border transition-colors ${
+                  timeLeft <= 60 
+                    ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 animate-pulse' 
+                    : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>{qMin}:{qSec}</span>
+              </div>
+            )}
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-500">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -780,9 +816,22 @@ const PERIODS_MAP = {
   ]
 };
 
-export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot, slotToEdit = null }) {
+const ALL_DAYS = [
+  { value: 'THU_2', label: 'Thứ 2' },
+  { value: 'THU_3', label: 'Thứ 3' },
+  { value: 'THU_4', label: 'Thứ 4' },
+  { value: 'THU_5', label: 'Thứ 5' },
+  { value: 'THU_6', label: 'Thứ 6' },
+  { value: 'THU_7', label: 'Thứ 7' },
+  { value: 'CHU_NHAT', label: 'Chủ Nhật' },
+];
+
+const DAY_LABELS = Object.fromEntries(ALL_DAYS.map(d => [d.value, d.label]));
+
+export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot, slotToEdit = null, defaultDay = null }) {
   const [subjectId, setSubjectId] = useState('');
-  const [dayOfWeek, setDayOfWeek] = useState('THU_2');
+  const [selectedDays, setSelectedDays] = useState(['THU_2']);
+  const [isDaysDropdownOpen, setIsDaysDropdownOpen] = useState(false);
   const [shift, setShift] = useState('SANG');
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('10:30');
@@ -791,11 +840,11 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // State tối ưu hóa mới
   const [isRecurring, setIsRecurring] = useState(true);
   const [date, setDate] = useState(() => new Date().toISOString().substring(0, 10));
   const [selectedPeriod, setSelectedPeriod] = useState('CUSTOM');
   const [conflictWarning, setConflictWarning] = useState(null);
+  const [conflictAlertMsg, setConflictAlertMsg] = useState(null);
 
   // State cho Môn học mới (Inlined)
   const [newSubjectName, setNewSubjectName] = useState('');
@@ -807,7 +856,7 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
     if (isOpen) {
       if (slotToEdit) {
         setSubjectId(slotToEdit.subjectId || (slotToEdit.subject ? slotToEdit.subject.id : (subjects[0]?.id || '')));
-        setDayOfWeek(slotToEdit.dayOfWeek || 'THU_2');
+        setSelectedDays([slotToEdit.dayOfWeek || 'THU_2']);
         setShift(slotToEdit.shift || 'SANG');
         const rawStart = slotToEdit.startTime || '08:00';
         const rawEnd = slotToEdit.endTime || '10:30';
@@ -825,7 +874,7 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
         } else {
           setSubjectId('NEW_SUBJECT');
         }
-        setDayOfWeek('THU_2');
+        setSelectedDays([defaultDay || 'THU_2']);
         setShift('SANG');
         setStartTime('08:00');
         setEndTime('10:30');
@@ -836,44 +885,14 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
       }
       setError('');
     }
-  }, [isOpen, slotToEdit, subjects]);
+  }, [isOpen, slotToEdit, subjects, defaultDay]);
 
   // Reset Period khi đổi Ca học
   useEffect(() => {
     setSelectedPeriod('CUSTOM');
   }, [shift]);
 
-  // Kiểm tra xung đột thời gian thực (Debounced check)
-  useEffect(() => {
-    if (!isOpen) return;
 
-    const checkConflict = async () => {
-      if (startTime && endTime) {
-        try {
-          const res = await checkScheduleConflictApi({
-            dayOfWeek: isRecurring ? dayOfWeek : null,
-            date: !isRecurring ? date : null,
-            startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
-            endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
-            isRecurring
-          });
-          if (res && res.success && res.data.hasConflict) {
-            setConflictWarning({
-              type: res.data.conflictType,
-              message: res.data.message
-            });
-          } else {
-            setConflictWarning(null);
-          }
-        } catch (e) {
-          console.warn("Conflict check failed:", e);
-        }
-      }
-    };
-
-    const delay = setTimeout(checkConflict, 300);
-    return () => clearTimeout(delay);
-  }, [dayOfWeek, date, startTime, endTime, isRecurring, isOpen]);
 
   if (!isOpen) return null;
 
@@ -893,6 +912,29 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
     setError('');
 
     try {
+      // 1. Kiểm tra xung đột thời gian trước khi lưu
+      const daysToCreate = isRecurring ? selectedDays : [null];
+      if (startTime && endTime && isRecurring) {
+        for (const day of daysToCreate) {
+          const conflictRes = await checkScheduleConflictApi({
+            id: slotToEdit ? slotToEdit.id : null,
+            dayOfWeek: day,
+            date: null,
+            startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
+            endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
+            isRecurring
+          });
+          if (conflictRes && conflictRes.success && conflictRes.data.hasConflict) {
+            if (conflictRes.data.conflictType === 'HARD_CONFLICT') {
+              const dayLabel = DAY_LABELS[day] || day;
+              setConflictAlertMsg(`${dayLabel}: ${conflictRes.data.message}`);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+      }
+
       let finalSubjectId = subjectId;
 
       // Nếu người dùng chọn tạo môn học mới
@@ -920,30 +962,51 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
         }
       }
 
-      const payload = {
-        subjectId: Number(finalSubjectId),
-        dayOfWeek: isRecurring ? dayOfWeek : null,
-        date: !isRecurring ? date : null,
-        shift,
-        startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
-        endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
-        room,
-        teacherName,
-        isRecurring
-      };
-
-      let res;
+      // Tạo / cập nhật lịch cho từng ngày đã chọn
+      const errors = [];
       if (slotToEdit) {
-        res = await updateScheduleSlotApi(slotToEdit.id, payload);
+        // Khi chỉnh sửa, chỉ cập nhật 1 slot
+        const payload = {
+          subjectId: Number(finalSubjectId),
+          dayOfWeek: isRecurring ? selectedDays[0] : null,
+          date: !isRecurring ? date : null,
+          shift,
+          startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
+          endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
+          room,
+          teacherName,
+          isRecurring
+        };
+        const res = await updateScheduleSlotApi(slotToEdit.id, payload);
+        if (!res || !res.success) {
+          errors.push(res?.message || 'Cập nhật lịch học thất bại.');
+        }
       } else {
-        res = await createScheduleSlotApi(payload);
+        // Khi tạo mới, tạo lịch cho tất cả ngày đã chọn
+        for (const day of daysToCreate) {
+          const payload = {
+            subjectId: Number(finalSubjectId),
+            dayOfWeek: isRecurring ? day : null,
+            date: !isRecurring ? date : null,
+            shift,
+            startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
+            endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
+            room,
+            teacherName,
+            isRecurring
+          };
+          const res = await createScheduleSlotApi(payload);
+          if (!res || !res.success) {
+            errors.push(res?.message || `Tạo lịch ${DAY_LABELS[day] || ''} thất bại.`);
+          }
+        }
       }
 
-      if (res && res.success) {
+      if (errors.length === 0) {
         onAddSlot();
         onClose();
       } else {
-        setError(res?.message || (slotToEdit ? 'Cập nhật lịch học thất bại.' : 'Tạo lịch học thất bại.'));
+        setError(errors.join(' | '));
       }
     } catch (err) {
       setError('Không thể kết nối đến máy chủ.');
@@ -972,17 +1035,7 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
           </div>
         )}
 
-        {/* Realtime Conflict Alert */}
-        {conflictWarning && (
-          <div className={`p-3 border rounded-xl text-xs flex items-center gap-2 animate-in fade-in duration-200 ${
-            conflictWarning.type === 'HARD_CONFLICT' 
-              ? 'bg-red-50 dark:bg-red-950/40 border-red-200 text-red-700 dark:text-red-300' 
-              : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 text-amber-700 dark:text-amber-300'
-          }`}>
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{conflictWarning.message}</span>
-          </div>
-        )}
+
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Kiểu lặp lại Toggle */}
@@ -1088,21 +1141,61 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
 
           {/* Thay đổi giữa Thứ tự hàng tuần / Chọn Ngày cụ thể */}
           {isRecurring ? (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Thứ trong tuần</label>
-              <select
-                value={dayOfWeek}
-                onChange={(e) => setDayOfWeek(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              >
-                <option value="THU_2">Thứ 2</option>
-                <option value="THU_3">Thứ 3</option>
-                <option value="THU_4">Thứ 4</option>
-                <option value="THU_5">Thứ 5</option>
-                <option value="THU_6">Thứ 6</option>
-                <option value="THU_7">Thứ 7</option>
-                <option value="CHU_NHAT">Chủ Nhật</option>
-              </select>
+            <div className="relative">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Thứ trong tuần {!slotToEdit && <span className="font-normal text-slate-400">(có thể chọn nhiều)</span>}
+              </label>
+              {slotToEdit ? (
+                /* Khi chỉnh sửa: chỉ cho chọn 1 ngày */
+                <select
+                  value={selectedDays[0]}
+                  onChange={(e) => setSelectedDays([e.target.value])}
+                  className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+                >
+                  {ALL_DAYS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                </select>
+              ) : (
+                /* Khi tạo mới: cho chọn nhiều ngày */
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsDaysDropdownOpen(!isDaysDropdownOpen)}
+                    className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white text-left flex items-center justify-between"
+                  >
+                    <span className={selectedDays.length === 0 ? 'text-slate-400' : ''}>
+                      {selectedDays.length === 0 ? 'Chọn thứ...' : selectedDays.map(d => DAY_LABELS[d]).join(', ')}
+                    </span>
+                    <svg className={`w-4 h-4 text-slate-400 transition-transform ${isDaysDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  {isDaysDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                      {ALL_DAYS.map(d => {
+                        const checked = selectedDays.includes(d.value);
+                        return (
+                          <label
+                            key={d.value}
+                            className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors ${
+                              checked ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedDays(prev =>
+                                  checked ? prev.filter(v => v !== d.value) : [...prev, d.value]
+                                );
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className={`text-sm ${checked ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>{d.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ) : (
             <div>
@@ -1197,6 +1290,44 @@ export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot,
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Custom Alert Modal */}
+      <ConflictAlertModal 
+        isOpen={!!conflictAlertMsg} 
+        message={conflictAlertMsg} 
+        onClose={() => setConflictAlertMsg(null)} 
+      />
+    </div>
+  );
+}
+
+function ConflictAlertModal({ isOpen, onClose, message }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-sm w-full p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
+            Trùng lịch học
+          </h3>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-['Inter']">
+            {message}
+          </p>
+        </div>
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-8 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md shadow-amber-500/20 transition-all w-full"
+          >
+            Đã hiểu
+          </button>
+        </div>
       </div>
     </div>
   );
