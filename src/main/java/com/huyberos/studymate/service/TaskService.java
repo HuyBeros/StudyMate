@@ -4,10 +4,12 @@ import com.huyberos.studymate.dto.request.TaskRequest;
 import com.huyberos.studymate.dto.response.TaskResponse;
 import com.huyberos.studymate.entity.Subject;
 import com.huyberos.studymate.entity.Task;
+import com.huyberos.studymate.entity.User;
 import com.huyberos.studymate.entity.enums.TaskStatus;
 import com.huyberos.studymate.exception.ResourceNotFoundException;
 import com.huyberos.studymate.repository.SubjectRepository;
 import com.huyberos.studymate.repository.TaskRepository;
+import com.huyberos.studymate.repository.UserRepository;
 import com.huyberos.studymate.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final SubjectRepository subjectRepository;
+    private final UserRepository userRepository;
     private final SecurityUtil securityUtil;
 
     @Transactional(readOnly = true)
@@ -50,7 +53,7 @@ public class TaskService {
     public TaskResponse getTaskById(Long id) {
         Long userId = securityUtil.getCurrentUserId();
         Task task = taskRepository.findById(id)
-                .filter(t -> t.getSubject().getUser().getId().equals(userId))
+                .filter(t -> t.getUser().getId().equals(userId) && !t.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
 
         return TaskResponse.fromEntity(task);
@@ -70,16 +73,28 @@ public class TaskService {
     @Transactional
     public TaskResponse createTask(TaskRequest request) {
         Long userId = securityUtil.getCurrentUserId();
-        Subject subject = subjectRepository.findByIdAndUserId(request.getSubjectId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + request.getSubjectId()));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Subject subject = null;
+        if (request.getSubjectId() != null) {
+            subject = subjectRepository.findByIdAndUserId(request.getSubjectId(), userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + request.getSubjectId()));
+        }
 
         Task task = Task.builder()
+                .user(user)
                 .subject(subject)
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .deadline(request.getDeadline())
+                .dueAt(request.getDueAt())
+                .priority(request.getPriority() != null ? request.getPriority() : com.huyberos.studymate.entity.enums.TaskPriority.MEDIUM)
                 .status(request.getStatus() != null ? request.getStatus() : TaskStatus.TODO)
                 .build();
+                
+        if (task.getStatus() == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+        }
 
         Task saved = taskRepository.save(task);
         return TaskResponse.fromEntity(saved);
@@ -89,19 +104,33 @@ public class TaskService {
     public TaskResponse updateTask(Long id, TaskRequest request) {
         Long userId = securityUtil.getCurrentUserId();
         Task task = taskRepository.findById(id)
-                .filter(t -> t.getSubject().getUser().getId().equals(userId))
+                .filter(t -> t.getUser().getId().equals(userId) && !t.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
 
-        if (!task.getSubject().getId().equals(request.getSubjectId())) {
-            Subject subject = subjectRepository.findByIdAndUserId(request.getSubjectId(), userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + request.getSubjectId()));
-            task.setSubject(subject);
+        if (request.getSubjectId() != null) {
+            if (task.getSubject() == null || !task.getSubject().getId().equals(request.getSubjectId())) {
+                Subject subject = subjectRepository.findByIdAndUserId(request.getSubjectId(), userId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + request.getSubjectId()));
+                task.setSubject(subject);
+            }
+        } else {
+            task.setSubject(null);
         }
 
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
-        task.setDeadline(request.getDeadline());
+        task.setDueAt(request.getDueAt());
+        
+        if (request.getPriority() != null) {
+            task.setPriority(request.getPriority());
+        }
+        
         if (request.getStatus() != null) {
+            if (task.getStatus() != TaskStatus.DONE && request.getStatus() == TaskStatus.DONE) {
+                task.setCompletedAt(LocalDateTime.now());
+            } else if (request.getStatus() != TaskStatus.DONE) {
+                task.setCompletedAt(null);
+            }
             task.setStatus(request.getStatus());
         }
 
@@ -113,9 +142,14 @@ public class TaskService {
     public TaskResponse updateTaskStatus(Long id, TaskStatus status) {
         Long userId = securityUtil.getCurrentUserId();
         Task task = taskRepository.findById(id)
-                .filter(t -> t.getSubject().getUser().getId().equals(userId))
+                .filter(t -> t.getUser().getId().equals(userId) && !t.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
 
+        if (task.getStatus() != TaskStatus.DONE && status == TaskStatus.DONE) {
+            task.setCompletedAt(LocalDateTime.now());
+        } else if (status != TaskStatus.DONE) {
+            task.setCompletedAt(null);
+        }
         task.setStatus(status);
         Task updated = taskRepository.save(task);
         return TaskResponse.fromEntity(updated);
@@ -125,9 +159,10 @@ public class TaskService {
     public void deleteTask(Long id) {
         Long userId = securityUtil.getCurrentUserId();
         Task task = taskRepository.findById(id)
-                .filter(t -> t.getSubject().getUser().getId().equals(userId))
+                .filter(t -> t.getUser().getId().equals(userId) && !t.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
 
-        taskRepository.delete(task);
+        task.setDeleted(true);
+        taskRepository.save(task);
     }
 }

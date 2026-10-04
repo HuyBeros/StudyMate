@@ -353,71 +353,84 @@ export async function deleteDocumentApi(id) {
   });
 }
 
+export async function askDocumentApi(documentId, question) {
+  return await request(`/documents/${documentId}/ask`, {
+    method: 'POST',
+    body: JSON.stringify({ question }),
+  });
+}
+
 // ── 8. AI GEMINI INTEGRATION API (Instant + Async Polling) ──────────
 export async function generateQuizFromNoteApi(noteId, config) {
+  const payload = typeof config === 'number' ? { numberOfQuestions: config } : (config || {});
   const jobRes = await request(`/jobs/notes/${noteId}/quiz`, { 
     method: 'POST',
-    body: JSON.stringify(config)
+    body: JSON.stringify(payload)
   });
   if (jobRes && jobRes.success && jobRes.data?.jobId) {
     return await pollJobUntilDone(jobRes.data.jobId);
   }
-  return { success: false, message: 'Failed to start AI job' };
+  return { success: false, message: jobRes?.message || 'Không thể khởi động tác vụ AI' };
 }
 
 export async function generateMindmapFromNoteApi(noteId, config) {
+  const payload = typeof config === 'object' && config !== null ? config : {};
   const jobRes = await request(`/jobs/notes/${noteId}/mindmap`, { 
     method: 'POST',
-    body: JSON.stringify(config)
+    body: JSON.stringify(payload)
   });
   if (jobRes && jobRes.success && jobRes.data?.jobId) {
     return await pollJobUntilDone(jobRes.data.jobId);
   }
-  return { success: false, message: 'Failed to start AI job' };
+  return { success: false, message: jobRes?.message || 'Không thể khởi động tác vụ AI' };
 }
 
 export async function summarizeNoteApi(noteId, config) {
+  const payload = typeof config === 'object' && config !== null ? config : {};
   const jobRes = await request(`/jobs/notes/${noteId}/summarize`, { 
     method: 'POST',
-    body: JSON.stringify(config)
+    body: JSON.stringify(payload)
   });
   if (jobRes && jobRes.success && jobRes.data?.jobId) {
     return await pollJobUntilDone(jobRes.data.jobId);
   }
-  return { success: false, message: 'Failed to start AI job' };
+  return { success: false, message: jobRes?.message || 'Không thể khởi động tác vụ AI' };
 }
 
 export async function generateQuizFromDocApi(docId, config) {
+  const payload = typeof config === 'number' ? { numberOfQuestions: config } : (config || {});
   const jobRes = await request(`/jobs/documents/${docId}/quiz`, { 
     method: 'POST',
-    body: JSON.stringify(config)
+    body: JSON.stringify(payload)
   });
   if (jobRes && jobRes.success && jobRes.data?.jobId) {
     return await pollJobUntilDone(jobRes.data.jobId);
   }
-  return { success: false, message: 'Failed to start AI job' };
+  return { success: false, message: jobRes?.message || 'Không thể khởi động tác vụ AI' };
 }
 
 export async function generateMindmapFromDocApi(docId, config) {
+  const payload = typeof config === 'object' && config !== null ? config : {};
   const jobRes = await request(`/jobs/documents/${docId}/mindmap`, { 
     method: 'POST',
-    body: JSON.stringify(config)
+    body: JSON.stringify(payload)
   });
   if (jobRes && jobRes.success && jobRes.data?.jobId) {
     return await pollJobUntilDone(jobRes.data.jobId);
   }
-  return { success: false, message: 'Failed to start AI job' };
+  return { success: false, message: jobRes?.message || 'Không thể khởi động tác vụ AI' };
 }
 
 export async function summarizeDocumentApi(docId, config) {
+  const payload = typeof config === 'object' && config !== null ? config : {};
   const jobRes = await request(`/jobs/documents/${docId}/summarize`, { 
     method: 'POST',
-    body: JSON.stringify(config)
+    body: JSON.stringify(payload)
   });
   if (jobRes && jobRes.success && jobRes.data?.jobId) {
     return await pollJobUntilDone(jobRes.data.jobId);
   }
-  return { success: false, message: 'Failed to start AI job' };
+  return { success: false, message: jobRes?.message || 'Không thể khởi động tác vụ AI' };
 }
 
 export async function saveAiOutputApi(type, payload) {

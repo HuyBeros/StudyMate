@@ -68,8 +68,8 @@ public class MemoService {
             memo.setTask(task);
             // Optionally auto-set subject and date based on task
             memo.setSubject(task.getSubject());
-            if (memo.getDate() == null && task.getDeadline() != null) {
-                memo.setDate(task.getDeadline().toLocalDate());
+            if (memo.getDate() == null && task.getDueAt() != null) {
+                memo.setDate(task.getDueAt().toLocalDate());
             }
         }
 

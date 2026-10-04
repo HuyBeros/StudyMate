@@ -2,10 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, BookOpen, FileText, CheckSquare, BarChart2, Plus, 
   Download, Bot, Zap, MoreVertical, FileImage, FileCode2, File,
-  Brain, FileSearch, HelpCircle
+  Brain, FileSearch, HelpCircle, Eye, ArrowRight, Loader2, UploadCloud,
+  Trash2, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getSubjectByIdApi, getSubjectDocumentsApi, getAiOutputsBySubjectApi } from '../services/api';
+import { 
+  getSubjectByIdApi, 
+  getSubjectDocumentsApi, 
+  getAiOutputsBySubjectApi,
+  uploadDocumentApi,
+  deleteDocumentApi 
+} from '../services/api';
+import DocumentSplitViewerModal from './DocumentSplitViewerModal';
+import UploadDocumentModal from './UploadDocumentModal';
 
 const FileIcon = ({ name }) => {
   const ext = (name || '').split('.').pop().toLowerCase();
@@ -30,6 +39,14 @@ export default function SubjectDetailView({
   const [aiOutputs, setAiOutputs] = useState({ quizzes: [], mindmaps: [], summaries: [] });
   const [activeTab, setActiveTab] = useState('materials');
   const [loading, setLoading] = useState(true);
+  const [selectedDocForViewer, setSelectedDocForViewer] = useState(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  // File Upload State & Ref
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
 
   // Dropdown states
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -90,6 +107,55 @@ export default function SubjectDetailView({
     if (action === 'quiz') onOpenQuizModal(docId);
     if (action === 'mindmap') onOpenMindmapModal(docId);
     if (action === 'summary') onOpenSummaryModal(docId);
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadError('');
+    setUploadSuccess('');
+    setUploading(true);
+
+    try {
+      const res = await uploadDocumentApi(subjectId, file);
+      if (res?.success) {
+        setUploadSuccess(`Tải lên thành công: ${file.name}`);
+        // Refresh documents list
+        const docRes = await getSubjectDocumentsApi(subjectId).catch(() => null);
+        if (docRes?.success && Array.isArray(docRes.data)) {
+          setDocuments(docRes.data);
+        }
+      } else {
+        setUploadError(res?.message || 'Tải tài liệu lên thất bại. Vui lòng thử lại!');
+      }
+    } catch (err) {
+      console.error("[SubjectDetailView] Upload error:", err);
+      setUploadError(err.response?.data?.message || err.message || 'Lỗi kết nối khi tải lên tài liệu.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteDoc = async (e, docId) => {
+    e.stopPropagation();
+    if (!window.confirm('Bạn có chắc chắn muốn xóa tài liệu này không?')) return;
+    setActiveMenuId(null);
+
+    try {
+      const res = await deleteDocumentApi(docId);
+      if (res?.success) {
+        setDocuments(prev => prev.filter(d => d.id !== docId));
+      } else {
+        alert(res?.message || 'Xóa tài liệu thất bại');
+      }
+    } catch (err) {
+      console.error("[SubjectDetailView] Delete error:", err);
+      alert('Lỗi kết nối khi xóa tài liệu.');
+    }
   };
 
   if (loading) return (
@@ -157,75 +223,140 @@ export default function SubjectDetailView({
         {/* MATERIALS TAB */}
         {activeTab === 'materials' && (
           <div className="space-y-6">
+            {/* Upload status feedback */}
+            {uploadSuccess && (
+              <div className="flex items-center justify-between p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-emerald-800 dark:text-emerald-300 text-sm animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+                  <span className="font-medium">{uploadSuccess}</span>
+                </div>
+                <button onClick={() => setUploadSuccess('')} className="text-emerald-600 hover:text-emerald-800 font-bold ml-2">✕</button>
+              </div>
+            )}
+
+            {uploadError && (
+              <div className="flex items-center justify-between p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-2xl text-red-800 dark:text-red-300 text-sm animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
+                  <span className="font-medium">{uploadError}</span>
+                </div>
+                <button onClick={() => setUploadError('')} className="text-red-600 hover:text-red-800 font-bold ml-2">✕</button>
+              </div>
+            )}
+
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-bold">Tài liệu học tập</h3>
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-colors">
-                <Plus className="w-4 h-4" />
+
+              <button 
+                type="button"
+                onClick={() => setIsUploadModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all shadow-sm active:scale-95 cursor-pointer"
+              >
+                <UploadCloud className="w-4 h-4" />
                 <span>Tải lên tài liệu</span>
               </button>
             </div>
             
             {documents.length === 0 ? (
-              <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-                <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">Chưa có tài liệu nào.</p>
+              <div 
+                onClick={() => setIsUploadModalOpen(true)}
+                className="text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 cursor-pointer transition-all group"
+              >
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <UploadCloud className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                </div>
+                <p className="text-slate-700 dark:text-slate-300 font-semibold mb-1">Chưa có tài liệu nào</p>
+                <p className="text-xs text-slate-500 font-medium">Bấm vào đây hoặc nhấn "Tải lên tài liệu" (Hỗ trợ PDF, DOCX, PPTX)</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {documents.map(doc => (
-                  <div key={doc.id} className="bg-white dark:bg-[#111C32] rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
-                    <div className="flex items-start justify-between">
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        <FileIcon name={doc.fileName} />
+                  <div 
+                    key={doc.id} 
+                    onClick={() => setSelectedDocForViewer(doc.id)}
+                    className="bg-white dark:bg-[#111C32] rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all group cursor-pointer flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                          <FileIcon name={doc.fileName} />
+                        </div>
+                        
+                        <div className="relative" ref={activeMenuId === doc.id ? menuRef : null}>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(activeMenuId === doc.id ? null : doc.id);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                          >
+                            <Zap className="w-4 h-4" />
+                            <span className="text-xs font-bold">AI Actions</span>
+                          </button>
+
+                          {/* Dropdown Menu */}
+                          {activeMenuId === doc.id && (
+                            <div className="absolute right-0 top-10 w-48 bg-white dark:bg-[#1A233A] rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAiAction('quiz', doc.id);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                              >
+                                <HelpCircle className="w-4 h-4 text-emerald-500" />
+                                Tạo Trắc nghiệm
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAiAction('mindmap', doc.id);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                              >
+                                <Brain className="w-4 h-4 text-purple-500" />
+                                Tạo Sơ đồ tư duy
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAiAction('summary', doc.id);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                              >
+                                <FileSearch className="w-4 h-4 text-amber-500" />
+                                Tóm tắt nội dung
+                              </button>
+                              <button 
+                                onClick={(e) => handleDeleteDoc(e, doc.id)}
+                                className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                                Xóa tài liệu
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="relative" ref={activeMenuId === doc.id ? menuRef : null}>
-                        <button 
-                          onClick={() => setActiveMenuId(activeMenuId === doc.id ? null : doc.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-                        >
-                          <Zap className="w-4 h-4" />
-                          <span className="text-xs font-bold">AI Actions</span>
-                        </button>
-
-                        {/* Dropdown Menu */}
-                        {activeMenuId === doc.id && (
-                          <div className="absolute right-0 top-10 w-48 bg-white dark:bg-[#1A233A] rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-2 z-50 animate-in fade-in zoom-in-95">
-                            <button 
-                              onClick={() => handleAiAction('quiz', doc.id)}
-                              className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
-                            >
-                              <HelpCircle className="w-4 h-4 text-emerald-500" />
-                              Tạo Trắc nghiệm
-                            </button>
-                            <button 
-                              onClick={() => handleAiAction('mindmap', doc.id)}
-                              className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
-                            >
-                              <Brain className="w-4 h-4 text-purple-500" />
-                              Tạo Sơ đồ tư duy
-                            </button>
-                            <button 
-                              onClick={() => handleAiAction('summary', doc.id)}
-                              className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 mt-1 pt-2"
-                            >
-                              <FileSearch className="w-4 h-4 text-amber-500" />
-                              Tóm tắt nội dung
-                            </button>
-                          </div>
-                        )}
+                      <div className="mt-4">
+                        <h4 className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-1 group-hover:text-blue-600 transition-colors" title={doc.fileName}>
+                          {doc.fileName}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                          <span>{new Date(doc.uploadDate).toLocaleDateString('vi-VN')}</span>
+                          <span>•</span>
+                          <span className="uppercase">{doc.fileType}</span>
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="mt-4">
-                      <h4 className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-1" title={doc.fileName}>
-                        {doc.fileName}
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                        <span>{new Date(doc.uploadDate).toLocaleDateString('vi-VN')}</span>
-                        <span>•</span>
-                        <span className="uppercase">{doc.fileType}</span>
-                      </p>
+
+                    <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400">
+                      <span className="flex items-center gap-1.5">
+                        <Eye className="w-3.5 h-3.5" />
+                        Đọc & Trợ lý AI
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 ))}
@@ -292,6 +423,27 @@ export default function SubjectDetailView({
           </div>
         )}
       </div>
+
+      {/* Split-View Document & AI Assistant Modal */}
+      <DocumentSplitViewerModal
+        isOpen={!!selectedDocForViewer}
+        onClose={() => setSelectedDocForViewer(null)}
+        documentId={selectedDocForViewer}
+      />
+
+      {/* Upload Document Modal */}
+      <UploadDocumentModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        subjectId={subjectId}
+        subjectName={subject?.name || ''}
+        onUploadSuccess={(newDoc) => {
+          if (newDoc) {
+            setDocuments(prev => [newDoc, ...prev.filter(d => d.id !== newDoc.id)]);
+          }
+          loadSubjectData();
+        }}
+      />
     </div>
   );
 }

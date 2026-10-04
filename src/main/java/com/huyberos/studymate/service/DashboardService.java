@@ -58,7 +58,7 @@ public class DashboardService {
         List<Task> allUserTasks = taskRepository.findAllByUserId(userId);
         int totalPending = (int) allUserTasks.stream().filter(t -> t.getStatus() != TaskStatus.DONE).count();
         int totalOverdue = (int) allUserTasks.stream()
-                .filter(t -> t.getDeadline() != null && t.getDeadline().isBefore(LocalDateTime.now()) && t.getStatus() != TaskStatus.DONE)
+                .filter(t -> t.getDueAt() != null && t.getDueAt().isBefore(LocalDateTime.now()) && t.getStatus() != TaskStatus.DONE)
                 .count();
 
         return TodayDashboardResponse.builder()

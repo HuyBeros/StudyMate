@@ -86,6 +86,36 @@ public class AiService {
         return aiRouter.generateContent(prompt, false);
     }
 
+    /**
+     * Hỏi đáp trực tiếp về nội dung tài liệu học tập (Chat with Document)
+     */
+    @Transactional(readOnly = true)
+    public String askDocument(Long documentId, String question) {
+        Long userId = securityUtil.getCurrentUserId();
+        Document doc = documentRepository.findByIdAndUserId(documentId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + documentId));
+
+        if (doc.getExtractedText() == null || doc.getExtractedText().isBlank()) {
+            throw new BadRequestException("Tài liệu chưa có văn bản trích xuất để AI phân tích.");
+        }
+
+        String prompt = """
+                Bạn là một trợ lý gia sư học tập AI thông minh trong ứng dụng StudyMate.
+                Dưới đây là nội dung tài liệu học tập:
+                --- TÀI LIỆU: %s ---
+                %s
+                ------------------------
+                Câu hỏi của học viên: "%s"
+
+                YÊU CẦU:
+                - Trả lời bằng tiếng Việt rõ ràng, có cấu trúc, thân thiện và chính xác dựa trên ngữ cảnh tài liệu trên.
+                - Trích dẫn ngắn gọn phần liên quan nếu có trong tài liệu.
+                - Định dạng Markdown đẹp mắt (gạch đầu dòng, in đậm các ý chính).
+                """.formatted(doc.getFileName(), AiTextUtil.truncateContent(doc.getExtractedText(), 15000), question);
+
+        return aiRouter.generateContent(prompt, false);
+    }
+
     // ── Quiz Generation ────────────────────────────────────
 
     @Transactional

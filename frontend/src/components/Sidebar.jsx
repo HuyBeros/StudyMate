@@ -37,7 +37,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenNewSession }) {
               EduFlow
             </h1>
             <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-full inline-block">
-              Study Smart
+              Học tập thông minh
             </span>
           </div>
         </div>

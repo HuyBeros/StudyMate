@@ -55,6 +55,9 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(ex ->
                 ex.authenticationEntryPoint(authEntryPoint))
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.disable())
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

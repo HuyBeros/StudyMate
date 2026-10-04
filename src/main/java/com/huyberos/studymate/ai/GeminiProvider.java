@@ -21,7 +21,7 @@ public class GeminiProvider implements AiProvider {
     @Value("${gemini.api.key:}")
     private String apiKey;
 
-    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent}")
+    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent}")
     private String apiUrl;
 
     private final RestClient restClient;
@@ -56,6 +56,8 @@ public class GeminiProvider implements AiProvider {
 
     @Override
     public String generateContentWithImage(String prompt, String mimeType, byte[] imageBytes, boolean forceJson) throws Exception {
+        String cleanKey = apiKey != null ? apiKey.trim() : "";
+        String targetUrl = buildTargetUrl(cleanKey);
         String base64Image = Base64.getEncoder().encodeToString(imageBytes);
 
         Map<String, Object> textPart = Map.of("text", prompt);
@@ -70,8 +72,8 @@ public class GeminiProvider implements AiProvider {
         }
 
         String rawResponse = restClient.post()
-                .uri(apiUrl)
-                .header("x-goog-api-key", apiKey)
+                .uri(targetUrl)
+                .header("x-goog-api-key", cleanKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(requestBody)
                 .retrieve()
@@ -83,6 +85,9 @@ public class GeminiProvider implements AiProvider {
     // ── Private helpers ─────────────────────────────────────
 
     private String callGemini(String prompt, boolean forceJson, Map<String, Object> responseSchema) throws Exception {
+        String cleanKey = apiKey != null ? apiKey.trim() : "";
+        String targetUrl = buildTargetUrl(cleanKey);
+
         Map<String, Object> part = Map.of("text", prompt);
         Map<String, Object> content = Map.of("parts", List.of(part));
 
@@ -99,14 +104,22 @@ public class GeminiProvider implements AiProvider {
         }
 
         String rawResponse = restClient.post()
-                .uri(apiUrl)
-                .header("x-goog-api-key", apiKey)
+                .uri(targetUrl)
+                .header("x-goog-api-key", cleanKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(requestBody)
                 .retrieve()
                 .body(String.class);
 
         return extractTextFromGeminiResponse(rawResponse);
+    }
+
+    private String buildTargetUrl(String cleanKey) {
+        String url = apiUrl;
+        if (!url.contains("key=") && !cleanKey.isBlank()) {
+            url = url + (url.contains("?") ? "&" : "?") + "key=" + cleanKey;
+        }
+        return url;
     }
 
     private String extractTextFromGeminiResponse(String jsonResponse) throws Exception {

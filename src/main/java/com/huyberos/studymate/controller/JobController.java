@@ -112,12 +112,12 @@ public class JobController {
         Document doc = documentRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + id));
 
-        if (doc.getExtractedText() == null || doc.getExtractedText().isBlank()) {
-            throw new BadRequestException("Document text is empty");
-        }
+        String text = (doc.getExtractedText() != null && !doc.getExtractedText().isBlank())
+                ? doc.getExtractedText()
+                : "Tài liệu học tập: " + doc.getFileName();
 
         AsyncJob job = asyncJobService.createJob(userId, "QUIZ");
-        asyncJobService.processQuizGeneration(job.getJobId(), SourceType.DOCUMENT, doc.getId(), doc.getFileName(), doc.getExtractedText(), config);
+        asyncJobService.processQuizGeneration(job.getJobId(), SourceType.DOCUMENT, doc.getId(), doc.getFileName(), text, config);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok("Quiz generation job started", Map.of("jobId", job.getJobId())));
@@ -135,12 +135,12 @@ public class JobController {
         Document doc = documentRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + id));
 
-        if (doc.getExtractedText() == null || doc.getExtractedText().isBlank()) {
-            throw new BadRequestException("Document text is empty");
-        }
+        String text = (doc.getExtractedText() != null && !doc.getExtractedText().isBlank())
+                ? doc.getExtractedText()
+                : "Tài liệu học tập: " + doc.getFileName();
 
         AsyncJob job = asyncJobService.createJob(userId, "MINDMAP");
-        asyncJobService.processMindmapGeneration(job.getJobId(), SourceType.DOCUMENT, doc.getId(), doc.getFileName(), doc.getExtractedText(), config);
+        asyncJobService.processMindmapGeneration(job.getJobId(), SourceType.DOCUMENT, doc.getId(), doc.getFileName(), text, config);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok("Mindmap generation job started", Map.of("jobId", job.getJobId())));
@@ -158,12 +158,12 @@ public class JobController {
         Document doc = documentRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found: " + id));
 
-        if (doc.getExtractedText() == null || doc.getExtractedText().isBlank()) {
-            throw new BadRequestException("Document text is empty");
-        }
+        String text = (doc.getExtractedText() != null && !doc.getExtractedText().isBlank())
+                ? doc.getExtractedText()
+                : "Tài liệu học tập: " + doc.getFileName();
 
         AsyncJob job = asyncJobService.createJob(userId, "SUMMARY");
-        asyncJobService.processSummaryGeneration(job.getJobId(), SourceType.DOCUMENT, doc.getId(), doc.getFileName(), doc.getExtractedText(), config);
+        asyncJobService.processSummaryGeneration(job.getJobId(), SourceType.DOCUMENT, doc.getId(), doc.getFileName(), text, config);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(ApiResponse.ok("Summary generation job started", Map.of("jobId", job.getJobId())));

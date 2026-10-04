@@ -85,6 +85,21 @@ public class AiController {
                 .body(ApiResponse.ok("Mindmap generated successfully from document", mindmap));
     }
 
+    /**
+     * POST /api/documents/{id}/ask — Hỏi đáp trực tiếp về tài liệu bằng AI (Chat with Document)
+     */
+    @PostMapping("/documents/{id}/ask")
+    public ResponseEntity<ApiResponse<String>> askDocument(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> payload) {
+        String question = payload != null ? payload.get("question") : null;
+        if (question == null || question.isBlank()) {
+            throw new com.huyberos.studymate.exception.BadRequestException("Câu hỏi không được để trống");
+        }
+        String answer = aiService.askDocument(id, question);
+        return ResponseEntity.ok(ApiResponse.ok("Answer generated successfully", answer));
+    }
+
     // ── Quiz & Mindmap Viewer & Attempt ────────────────────
 
     /**

@@ -195,7 +195,7 @@ export default function App() {
     const newUserObj = {
       fullName: userData.fullName || userData.email,
       email: userData.email,
-      role: "Member Student",
+      role: "Học viên",
       avatar: userData.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
       streak: 1,
       dailyGoalPercent: 0,

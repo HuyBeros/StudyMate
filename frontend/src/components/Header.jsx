@@ -231,7 +231,7 @@ export default function Header({
           className="w-full bg-slate-100/80 dark:bg-[#172136] border border-transparent focus:border-blue-500 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 pl-11 pr-12 py-2.5 rounded-full transition-all outline-none"
         />
         <kbd className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-400 dark:text-slate-400 bg-white dark:bg-[#0B0F19] px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 shadow-2xs">
-          ⌘K
+          {navigator.platform.toUpperCase().includes('MAC') ? '⌘K' : 'Ctrl K'}
         </kbd>
 
         {/* Search Results Dropdown */}

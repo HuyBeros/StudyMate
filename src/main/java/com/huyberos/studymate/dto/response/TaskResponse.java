@@ -18,26 +18,34 @@ public class TaskResponse {
 
     private String title;
     private String description;
-    private LocalDateTime deadline;
+    private LocalDateTime dueAt;
+    private com.huyberos.studymate.entity.enums.TaskPriority priority;
     private TaskStatus status;
+    private LocalDateTime completedAt;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private boolean deleted;
     private boolean isOverdue;
 
     public static TaskResponse fromEntity(Task task) {
-        boolean overdue = task.getDeadline() != null
-                && task.getDeadline().isBefore(LocalDateTime.now())
+        boolean overdue = task.getDueAt() != null
+                && task.getDueAt().isBefore(LocalDateTime.now())
                 && task.getStatus() != TaskStatus.DONE;
 
         return TaskResponse.builder()
                 .id(task.getId())
-                .subjectId(task.getSubject().getId())
-                .subjectName(task.getSubject().getName())
-                .subjectColor(task.getSubject().getColor())
+                .subjectId(task.getSubject() != null ? task.getSubject().getId() : null)
+                .subjectName(task.getSubject() != null ? task.getSubject().getName() : null)
+                .subjectColor(task.getSubject() != null ? task.getSubject().getColor() : null)
                 .title(task.getTitle())
                 .description(task.getDescription())
-                .deadline(task.getDeadline())
+                .dueAt(task.getDueAt())
+                .priority(task.getPriority())
                 .status(task.getStatus())
+                .completedAt(task.getCompletedAt())
                 .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
+                .deleted(task.isDeleted())
                 .isOverdue(overdue)
                 .build();
     }
