@@ -35,6 +35,9 @@ build/
 ### Local agent configuration ###
 /.agents/
 
+### Local project documentation ###
+/docs/
+
 ### Generated frontend bundle ###
 /src/main/resources/static/
 
