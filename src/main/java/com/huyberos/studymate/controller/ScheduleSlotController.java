@@ -1,7 +1,9 @@
 package com.huyberos.studymate.controller;
 
+import com.huyberos.studymate.dto.request.ConflictCheckRequest;
 import com.huyberos.studymate.dto.request.ScheduleSlotRequest;
 import com.huyberos.studymate.dto.response.ApiResponse;
+import com.huyberos.studymate.dto.response.ConflictCheckResponse;
 import com.huyberos.studymate.dto.response.ScheduleSlotResponse;
 import com.huyberos.studymate.entity.enums.DayOfWeek;
 import com.huyberos.studymate.service.ScheduleSlotService;
@@ -58,6 +60,12 @@ public class ScheduleSlotController {
         ScheduleSlotResponse created = scheduleSlotService.createSlot(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Schedule slot created", created));
+    }
+
+    @PostMapping("/check-conflict")
+    public ResponseEntity<ApiResponse<ConflictCheckResponse>> checkConflict(
+            @Valid @RequestBody ConflictCheckRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(scheduleSlotService.checkConflict(request)));
     }
 
     /**

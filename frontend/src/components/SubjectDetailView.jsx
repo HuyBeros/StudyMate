@@ -10,6 +10,7 @@ import {
   getSubjectByIdApi, 
   getSubjectDocumentsApi, 
   getAiOutputsBySubjectApi,
+  getNotesApi,
   uploadDocumentApi,
   deleteDocumentApi 
 } from '../services/api';
@@ -27,15 +28,14 @@ const FileIcon = ({ name }) => {
 export default function SubjectDetailView({ 
   subjectId, 
   subjects = [],
-  onBack, 
-  onOpenQuizModal,
-  onOpenMindmapModal,
-  onOpenSummaryModal
+  onBack
 }) {
   const { t } = useTranslation('subjects');
   const initialSubject = subjects.find(s => String(s.id) === String(subjectId)) || null;
   const [subject, setSubject] = useState(initialSubject);
   const [documents, setDocuments] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [reviewError, setReviewError] = useState('');
   const [aiOutputs, setAiOutputs] = useState({ quizzes: [], mindmaps: [], summaries: [] });
   const [activeTab, setActiveTab] = useState('materials');
   const [loading, setLoading] = useState(true);
@@ -83,17 +83,16 @@ export default function SubjectDetailView({
         setDocuments([]);
       }
 
-      // Fetch AI Outputs
-      const aiRes = await getAiOutputsBySubjectApi(subjectId).catch(() => null);
-      if (aiRes?.success && aiRes.data) {
-        setAiOutputs({
-          quizzes: Array.isArray(aiRes.data.quizzes) ? aiRes.data.quizzes : [],
-          mindmaps: Array.isArray(aiRes.data.mindmaps) ? aiRes.data.mindmaps : [],
-          summaries: Array.isArray(aiRes.data.summaries) ? aiRes.data.summaries : []
-        });
-      } else {
-        setAiOutputs({ quizzes: [], mindmaps: [], summaries: [] });
-      }
+      const [aiRes, noteRes] = await Promise.all([
+        getAiOutputsBySubjectApi(subjectId), getNotesApi(subjectId)
+      ]);
+      setNotes(noteRes?.success && Array.isArray(noteRes.data) ? noteRes.data : []);
+      setReviewError(aiRes?.success ? '' : 'Chưa tải được thư viện ôn tập.');
+      setAiOutputs({
+        quizzes: Array.isArray(aiRes?.data?.quizzes) ? aiRes.data.quizzes : [],
+        mindmaps: Array.isArray(aiRes?.data?.mindmaps) ? aiRes.data.mindmaps : [],
+        summaries: Array.isArray(aiRes?.data?.summaries) ? aiRes.data.summaries : [],
+      });
 
     } catch (err) {
       console.error("[SubjectDetailView] Error loading subject data:", err);
@@ -102,12 +101,24 @@ export default function SubjectDetailView({
     }
   };
 
-  const handleAiAction = (action, docId) => {
+  function openDocument(documentId, tab = 'summary') {
     setActiveMenuId(null);
-    if (action === 'quiz') onOpenQuizModal(docId);
-    if (action === 'mindmap') onOpenMindmapModal(docId);
-    if (action === 'summary') onOpenSummaryModal(docId);
-  };
+    setSelectedDocForViewer({ documentId, tab });
+  }
+
+  function addSavedOutput(type, saved) {
+    const collection = { quiz: 'quizzes', mindmap: 'mindmaps', summary: 'summaries' }[type];
+    setAiOutputs(current => ({
+      ...current,
+      [collection]: [saved, ...current[collection].filter(item => item.id !== saved.id)],
+    }));
+  }
+
+  function sourceFor(item) {
+    return item.sourceType === 'NOTE'
+      ? notes.find(note => String(note.id) === String(item.sourceId))
+      : documents.find(doc => String(doc.id) === String(item.sourceId));
+  }
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
@@ -172,7 +183,7 @@ export default function SubjectDetailView({
           <ArrowLeft className="w-5 h-5 text-slate-700 dark:text-slate-300" />
         </button>
         <div>
-          <h2 className="text-3xl font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white">
+          <h2 className="select-none text-3xl font-['Be_Vietnam_Pro'] font-bold text-slate-900 dark:text-white">
             {subject ? subject.name : 'Chi tiết Môn học'}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium">
@@ -182,11 +193,11 @@ export default function SubjectDetailView({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex items-center gap-5 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
         {[
           { id: 'overview', icon: BookOpen, label: 'Tổng quan' },
           { id: 'materials', icon: FileText, label: 'Tài liệu & Ghi chú' },
-          { id: 'review', icon: CheckSquare, label: 'Ôn tập (AI)' },
+          { id: 'review', icon: CheckSquare, label: 'Ôn tập' },
           { id: 'stats', icon: BarChart2, label: 'Thống kê' }
         ].map(tab => {
           const Icon = tab.icon;
@@ -195,7 +206,7 @@ export default function SubjectDetailView({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 pb-4 border-b-2 transition-all font-['Inter'] font-semibold ${
+              className={`flex shrink-0 items-center gap-2 pb-4 border-b-2 transition-all font-['Inter'] font-semibold ${
                 isActive 
                   ? 'border-blue-600 text-blue-600 dark:text-blue-400' 
                   : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -273,8 +284,7 @@ export default function SubjectDetailView({
                 {documents.map(doc => (
                   <div 
                     key={doc.id} 
-                    onClick={() => setSelectedDocForViewer(doc.id)}
-                    className="bg-white dark:bg-[#111C32] rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all group cursor-pointer flex flex-col justify-between"
+                    className="bg-white dark:bg-[#111C32] rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-start justify-between">
@@ -284,14 +294,16 @@ export default function SubjectDetailView({
                         
                         <div className="relative" ref={activeMenuId === doc.id ? menuRef : null}>
                           <button 
+                            aria-expanded={activeMenuId === doc.id}
+                            aria-label={`Tạo nội dung AI từ ${doc.fileName}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveMenuId(activeMenuId === doc.id ? null : doc.id);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors"
                           >
                             <Zap className="w-4 h-4" />
-                            <span className="text-xs font-bold">AI Actions</span>
+                            <span className="text-xs font-semibold">Tạo nội dung AI</span>
                           </button>
 
                           {/* Dropdown Menu */}
@@ -300,7 +312,7 @@ export default function SubjectDetailView({
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAiAction('quiz', doc.id);
+                                  openDocument(doc.id, 'quiz');
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
                               >
@@ -310,7 +322,7 @@ export default function SubjectDetailView({
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAiAction('mindmap', doc.id);
+                                  openDocument(doc.id, 'mindmap');
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
                               >
@@ -320,7 +332,7 @@ export default function SubjectDetailView({
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAiAction('summary', doc.id);
+                                  openDocument(doc.id, 'summary');
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
                               >
@@ -340,24 +352,21 @@ export default function SubjectDetailView({
                       </div>
                       
                       <div className="mt-4">
-                        <h4 className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-1 group-hover:text-blue-600 transition-colors" title={doc.fileName}>
+                        <h4 className="min-h-12 line-clamp-2 break-words font-semibold leading-6 text-slate-800 dark:text-slate-200" title={doc.fileName}>
                           {doc.fileName}
                         </h4>
-                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                          <span>{new Date(doc.uploadDate).toLocaleDateString('vi-VN')}</span>
-                          <span>•</span>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 flex items-center gap-2">
+                          {doc.uploadDate && <><span>{new Date(doc.uploadDate).toLocaleDateString('vi-VN')}</span><span>•</span></>}
                           <span className="uppercase">{doc.fileType}</span>
                         </p>
                       </div>
                     </div>
 
-                    <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400">
-                      <span className="flex items-center gap-1.5">
-                        <Eye className="w-3.5 h-3.5" />
-                        Đọc & Trợ lý AI
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                    </div>
+                    <button type="button" onClick={() => openDocument(doc.id)}
+                      aria-label={`Mở tài liệu ${doc.fileName}`}
+                      className="primary-button mt-4 w-full justify-center">
+                      <Eye className="w-4 h-4" />Mở tài liệu
+                    </button>
                   </div>
                 ))}
               </div>
@@ -365,71 +374,57 @@ export default function SubjectDetailView({
           </div>
         )}
 
-        {/* REVIEW TAB (AI) */}
         {activeTab === 'review' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold">Thư viện ôn tập AI</h3>
+          <section className="space-y-5">
+            <div>
+              <h3 className="text-lg font-bold">Thư viện ôn tập</h3>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Mở lại trắc nghiệm, tóm tắt và sơ đồ tư duy đã lưu của môn này.</p>
             </div>
-
-            {(aiOutputs?.quizzes?.length || 0) === 0 && (aiOutputs?.mindmaps?.length || 0) === 0 && (aiOutputs?.summaries?.length || 0) === 0 ? (
-              <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-                <Bot className="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">Bạn chưa tạo nội dung ôn tập nào bằng AI.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Quizzes */}
-                {(aiOutputs?.quizzes || []).map(q => (
-                  <div key={`q-${q.id}`} className="bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-5 border border-emerald-100 dark:border-emerald-900/50 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
-                        <HelpCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <span className="text-xs font-bold text-emerald-600 uppercase">Trắc nghiệm</span>
-                    </div>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{q.title}</h4>
-                    <p className="text-sm text-slate-500">{q.questions?.length || 0} câu hỏi</p>
-                  </div>
-                ))}
-
-                {/* Mindmaps */}
-                {aiOutputs.mindmaps.map(m => (
-                  <div key={`m-${m.id}`} className="bg-purple-50 dark:bg-purple-950/20 rounded-2xl p-5 border border-purple-100 dark:border-purple-900/50 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-                        <Brain className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <span className="text-xs font-bold text-purple-600 uppercase">Sơ đồ tư duy</span>
-                    </div>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{m.title}</h4>
-                  </div>
-                ))}
-
-                {/* Summaries */}
-                {aiOutputs.summaries.map(s => (
-                  <div key={`s-${s.id}`} className="bg-amber-50 dark:bg-amber-950/20 rounded-2xl p-5 border border-amber-100 dark:border-amber-900/50 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
-                        <FileSearch className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <span className="text-xs font-bold text-amber-600 uppercase">Tóm tắt</span>
-                    </div>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{s.title}</h4>
-                  </div>
-                ))}
+            {reviewError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{reviewError} <button className="underline" onClick={loadSubjectData}>Thử lại</button></p>}
+            {!reviewError && Object.values(aiOutputs).every(items => items.length === 0) && (
+              <div className="surface space-y-3 p-6 text-center">
+                <p className="text-sm text-slate-600 dark:text-slate-300">Chưa có nội dung đã lưu. Hãy mở tài liệu, tạo nội dung rồi chọn Lưu vào Ôn tập.</p>
+                <button className="secondary-button" onClick={() => setActiveTab('materials')}>Đến tài liệu học tập</button>
               </div>
             )}
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {[
+                ['quiz', 'Trắc nghiệm', 'Làm bài', HelpCircle, aiOutputs.quizzes],
+                ['summary', 'Tóm tắt', 'Đọc tóm tắt', FileSearch, aiOutputs.summaries],
+                ['mindmap', 'Sơ đồ tư duy', 'Xem sơ đồ', Brain, aiOutputs.mindmaps],
+              ].flatMap(([type, label, action, Icon, items]) => items.map(item => {
+                const source = sourceFor(item);
+                const isNote = item.sourceType === 'NOTE';
+                return <article key={type + ':' + item.id} className="surface flex flex-col gap-3 p-5">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-300"><Icon className="h-4 w-4" />{label}</p>
+                  <h4 className="break-words font-bold">{item.title || label}</h4>
+                  <p className="flex-1 break-words text-sm text-slate-600 dark:text-slate-300">
+                    {isNote ? 'Ghi chú' : 'Tài liệu'} · {source?.title || source?.fileName || 'Nguồn không còn trong danh sách'}
+                    {type === 'quiz' && <span className="mt-1 block">{item.totalQuestions ?? item.questions?.length ?? 0} câu hỏi</span>}
+                  </p>
+                  <button className="secondary-button self-start" onClick={() => setSelectedDocForViewer({
+                    documentId: isNote ? null : item.sourceId,
+                    note: isNote ? source : null,
+                    tab: type,
+                    savedItem: item,
+                  })}>{action}</button>
+                </article>;
+              }))}
+            </div>
+          </section>
         )}
       </div>
 
-      {/* Split-View Document & AI Assistant Modal */}
-      <DocumentSplitViewerModal
-        isOpen={!!selectedDocForViewer}
+      {selectedDocForViewer && <DocumentSplitViewerModal
+        isOpen
         onClose={() => setSelectedDocForViewer(null)}
-        documentId={selectedDocForViewer}
-      />
+        documentId={selectedDocForViewer.documentId}
+        initialTab={selectedDocForViewer.tab}
+        savedItem={selectedDocForViewer.savedItem}
+        note={selectedDocForViewer.note}
+        onSaved={addSavedOutput}
+        onOpenReview={() => { setSelectedDocForViewer(null); setActiveTab('review'); }}
+      />}
 
       {/* Upload Document Modal */}
       <UploadDocumentModal

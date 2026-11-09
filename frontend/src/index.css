@@ -5,7 +5,7 @@
 @layer base {
   :root {
     /* Font roles per design spec */
-    --font-logo: 'Space Grotesk', sans-serif;       /* Logo "EduFlow" – w700 */
+    --font-logo: 'Space Grotesk', sans-serif;       /* Logo "StudyMate" – w700 */
     --font-heading: 'Be Vietnam Pro', sans-serif;   /* Headings lớn – w700-800 */
     --font-body: 'Be Vietnam Pro', sans-serif;      /* Body / label nhỏ – w400-500 */
     --font-ui: 'Inter', sans-serif;                /* Nav, badge, button, input */
@@ -127,3 +127,65 @@
 .ai-floating-btn {
   animation: aiGlow 3s infinite ease-in-out;
 }
+
+@layer base {
+  button, summary, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  button, summary { touch-action: manipulation; }
+  button:not(:disabled), summary { cursor: pointer; }
+  button:disabled { cursor: default; opacity: .6; }
+  :focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+  input::placeholder, textarea::placeholder { color: #475569; opacity: 1; }
+  .dark input::placeholder, .dark textarea::placeholder { color: #cbd5e1; }
+  h2, h3, p { overflow-wrap: anywhere; }
+  progress { display: block; border-radius: 999px; overflow: hidden; background: #cbd5e1; }
+  progress::-webkit-progress-bar { background: #cbd5e1; border-radius: 999px; }
+  progress::-webkit-progress-value { background: #2563eb; border-radius: 999px; }
+}
+
+@layer components {
+  .page-shell { @apply w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8; }
+  .surface { @apply min-w-0 bg-white dark:bg-[#111C32] rounded-2xl border border-slate-200 dark:border-slate-700; }
+  .primary-button { @apply inline-flex items-center gap-2 min-h-11 rounded-xl px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors; }
+  .secondary-button { @apply inline-flex items-center justify-center gap-2 min-h-11 rounded-xl px-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold transition-colors; }
+  .field { @apply min-w-0 min-h-11 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100; }
+  .form-label { @apply flex flex-col gap-2 text-sm font-semibold; }
+  .empty-state { @apply py-10 text-sm text-center text-slate-600 dark:text-slate-300; }
+}
+
+.avatar { isolation: isolate; }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
+.dark input::placeholder, .dark textarea::placeholder { color: #cbd5e1; }
+.task-actions { opacity: 0; }
+.group:hover .task-actions, .group:focus-within .task-actions { opacity: 1; }
+.task-completed > button:first-child { animation: task-check .35s ease-out; }
+.success-notice { animation: notice-in .25s ease-out; }
+.dark .recharts-cartesian-axis-tick-value { fill: #cbd5e1; }
+.mobile-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.mobile-add-task { bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)); }
+@keyframes task-check { 50% { transform: scale(1.25); } }
+@keyframes notice-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 767px) {
+  .app-header { height: auto; min-height: 4rem; padding: .65rem 1rem; gap: .5rem; flex-wrap: wrap; }
+  .header-search { order: 2; flex-basis: 100%; max-width: none; }
+  .app-header > div:last-child { justify-content: flex-end; width: 100%; gap: .5rem; }
+  .notification-panel { position: fixed; top: 4rem; left: 1rem; right: 1rem; width: auto; max-height: 70dvh; }
+  .task-actions { opacity: 1; }
+  .app-body main { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+  .field { max-width: 100%; }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .app-header { padding-left: 1rem; padding-right: 1rem; gap: .75rem; }
+  .app-header > div:last-child { gap: .4rem; }
+  .app-header .text-right { display: none; }
+}
+@media (pointer: coarse) {
+  .task-actions { opacity: 1; }
+  .task-actions button { min-width: 2.75rem; min-height: 2.75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+:root { --chart-label: #475569; }
+.dark { --chart-label: #cbd5e1; }

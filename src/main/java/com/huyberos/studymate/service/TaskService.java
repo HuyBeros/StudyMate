@@ -28,11 +28,18 @@ public class TaskService {
     private final SubjectRepository subjectRepository;
     private final UserRepository userRepository;
     private final SecurityUtil securityUtil;
+    private final com.huyberos.studymate.study.StudyTaskEvents studyEvents;
+    private final java.time.Clock clock;
 
     @Transactional(readOnly = true)
     public List<TaskResponse> getAllTasks(TaskStatus status, Long subjectId) {
         Long userId = securityUtil.getCurrentUserId();
         List<Task> tasks;
+
+        if (subjectId != null) {
+            subjectRepository.findByIdAndUserId(subjectId, userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Subject not found: " + subjectId));
+        }
 
         if (subjectId != null && status != null) {
             tasks = taskRepository.findBySubjectIdAndStatus(subjectId, status);
@@ -72,9 +79,8 @@ public class TaskService {
 
     @Transactional
     public TaskResponse createTask(TaskRequest request) {
-        Long userId = securityUtil.getCurrentUserId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = studyEvents.lockAccount();
+        Long userId = user.getId();
 
         Subject subject = null;
         if (request.getSubjectId() != null) {
@@ -83,6 +89,7 @@ public class TaskService {
         }
 
         Task task = Task.builder()
+                .createdAtInstant(clock.instant())
                 .user(user)
                 .subject(subject)
                 .title(request.getTitle())
@@ -97,15 +104,18 @@ public class TaskService {
         }
 
         Task saved = taskRepository.save(task);
+        studyEvents.record(saved, null);
         return TaskResponse.fromEntity(saved);
     }
 
     @Transactional
     public TaskResponse updateTask(Long id, TaskRequest request) {
-        Long userId = securityUtil.getCurrentUserId();
+        User currentUser = studyEvents.lockAccount();
+        Long userId = currentUser.getId();
         Task task = taskRepository.findById(id)
                 .filter(t -> t.getUser().getId().equals(userId) && !t.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
+        TaskStatus previousStatus = task.getStatus();
 
         if (request.getSubjectId() != null) {
             if (task.getSubject() == null || !task.getSubject().getId().equals(request.getSubjectId())) {
@@ -135,15 +145,18 @@ public class TaskService {
         }
 
         Task updated = taskRepository.save(task);
+        studyEvents.record(updated, previousStatus);
         return TaskResponse.fromEntity(updated);
     }
 
     @Transactional
     public TaskResponse updateTaskStatus(Long id, TaskStatus status) {
-        Long userId = securityUtil.getCurrentUserId();
+        User currentUser = studyEvents.lockAccount();
+        Long userId = currentUser.getId();
         Task task = taskRepository.findById(id)
                 .filter(t -> t.getUser().getId().equals(userId) && !t.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
+        TaskStatus previousStatus = task.getStatus();
 
         if (task.getStatus() != TaskStatus.DONE && status == TaskStatus.DONE) {
             task.setCompletedAt(LocalDateTime.now());
@@ -152,17 +165,20 @@ public class TaskService {
         }
         task.setStatus(status);
         Task updated = taskRepository.save(task);
+        studyEvents.record(updated, previousStatus);
         return TaskResponse.fromEntity(updated);
     }
 
     @Transactional
     public void deleteTask(Long id) {
-        Long userId = securityUtil.getCurrentUserId();
+        User currentUser = studyEvents.lockAccount();
+        Long userId = currentUser.getId();
         Task task = taskRepository.findById(id)
                 .filter(t -> t.getUser().getId().equals(userId) && !t.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
 
         task.setDeleted(true);
         taskRepository.save(task);
+        studyEvents.deleted(currentUser);
     }
 }

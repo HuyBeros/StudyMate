@@ -20,15 +20,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
-
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getEmail())
-                .password(user.getPasswordHash() != null ? user.getPasswordHash() : "")
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
-                .build();
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+        User user = userRepository.findByLogin(identifier)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return details(user);
     }
 
     /**
@@ -38,9 +33,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserById(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
+        return details(user);
+    }
 
+    private UserDetails details(User user) {
         return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getEmail())
+                .username(user.getUsername() != null ? user.getUsername() : user.getEmail())
                 .password(user.getPasswordHash() != null ? user.getPasswordHash() : "")
                 .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
                 .build();

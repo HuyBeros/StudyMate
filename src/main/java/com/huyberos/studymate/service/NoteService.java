@@ -35,6 +35,9 @@ public class NoteService {
     @Transactional(readOnly = true)
     public List<NoteResponse> getAllNotes(Long subjectId, ImportanceLevel level, String search) {
         Long userId = securityUtil.getCurrentUserId();
+        if (subjectId != null && !subjectRepository.existsByIdAndUserId(subjectId, userId)) {
+            throw new ResourceNotFoundException("Subject not found: " + subjectId);
+        }
         List<Note> notes;
 
         if (search != null && !search.isBlank()) {

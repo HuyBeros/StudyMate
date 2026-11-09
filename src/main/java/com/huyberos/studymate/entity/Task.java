@@ -21,6 +21,10 @@ public class Task {
     @SequenceGenerator(name = "task_seq", sequenceName = "task_id_seq", allocationSize = 1)
     private Long id;
 
+    @Builder.Default
+    @Column(name = "public_id", nullable = false, unique = true, updatable = false)
+    private java.util.UUID publicId = java.util.UUID.randomUUID();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -54,6 +58,14 @@ public class Task {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "created_at_instant", nullable = false, updatable = false)
+    private java.time.Instant createdAtInstant;
+
+    @PrePersist
+    void initializeCanonicalCreatedAt() {
+        if (createdAtInstant == null) createdAtInstant = java.time.Instant.now();
+    }
 
     @org.hibernate.annotations.UpdateTimestamp
     @Column(name = "updated_at", nullable = false)

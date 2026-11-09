@@ -34,6 +34,7 @@ build/
 
 ### Environment & Secrets ###
 .env
+.local-backups/
 *.env.local
 application-local.properties
 application-local.yml

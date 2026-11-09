@@ -10,8 +10,14 @@ import {
   generateQuizFromDocApi, 
   generateMindmapFromDocApi,
   attemptQuizApi, 
-  askDocumentApi
+  askDocumentApi,
+  saveAiOutputApi,
+  getAuthToken,
+  uploadUrl,
 } from '../services/api';
+import { readAiResult } from '../lib/aiResult';
+import AiGenerateModal from './ai/AiGenerateModal';
+import AiPreviewPanel from './ai/AiPreviewPanel';
 
 const FileIcon = ({ name }) => {
   const ext = (name || '').split('.').pop().toLowerCase();
@@ -21,31 +27,41 @@ const FileIcon = ({ name }) => {
   return <FileText className="w-5 h-5 text-blue-500" />;
 };
 
-export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }) {
+export default function DocumentSplitViewerModal({ isOpen, onClose, documentId, initialTab = 'summary', savedItem, note, onSaved, onOpenReview }) {
+  const [savedResult] = useState(() => savedItem ? readAiResult(initialTab, savedItem) : null);
+  const reviewing = !!savedItem;
   const [doc, setDoc] = useState(null);
-  const [loadingDoc, setLoadingDoc] = useState(true);
+  const [loadingDoc, setLoadingDoc] = useState(!!documentId);
   const [docViewMode, setDocViewMode] = useState('pdf'); // 'pdf' | 'text'
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   // AI Panel State
-  const [activeAiTab, setActiveAiTab] = useState('summary'); // 'summary' | 'quiz' | 'mindmap' | 'chat'
+  const [activeAiTab, setActiveAiTab] = useState(initialTab);
+  const [configType, setConfigType] = useState(null);
+  const [editType, setEditType] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   
   // Summary Tab State
-  const [summaryText, setSummaryText] = useState('');
+  const [summaryData, setSummaryData] = useState(initialTab === 'summary' ? savedResult : null);
+  const summaryText = summaryData?.summary || '';
   const [summaryError, setSummaryError] = useState('');
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
 
   // Quiz Tab State
-  const [quizData, setQuizData] = useState(null);
+  const [quizData, setQuizData] = useState(initialTab === 'quiz' ? savedResult : null);
   const [quizError, setQuizError] = useState('');
   const [loadingQuiz, setLoadingQuiz] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [answerDetails, setAnswerDetails] = useState({});
 
   // Mindmap Tab State
-  const [mindmapData, setMindmapData] = useState(null);
+  const [mindmapData, setMindmapData] = useState(initialTab === 'mindmap' ? savedResult : null);
   const [mindmapError, setMindmapError] = useState('');
   const [loadingMindmap, setLoadingMindmap] = useState(false);
 
@@ -60,27 +76,8 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
   const [sendingQuestion, setSendingQuestion] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Load document details
   useEffect(() => {
-    if (isOpen && documentId) {
-      loadDocumentDetails(documentId);
-      // Reset AI tabs
-      setSummaryText('');
-      setSummaryError('');
-      setQuizData(null);
-      setQuizError('');
-      setSelectedAnswers({});
-      setQuizSubmitted(false);
-      setQuizScore(null);
-      setMindmapData(null);
-      setMindmapError('');
-      setChatMessages([
-        {
-          sender: 'ai',
-          text: 'Xin chào! Tôi là Trợ lý Gia sư AI. Bạn có thể hỏi bất kỳ câu hỏi nào về nội dung tài liệu này, tôi sẽ giải đáp chi tiết dựa trên bài học!'
-        }
-      ]);
-    }
+    if (isOpen && documentId) loadDocumentDetails(documentId);
   }, [isOpen, documentId]);
 
   const loadDocumentDetails = async (id) => {
@@ -108,19 +105,17 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
   }, [chatMessages, activeAiTab]);
 
   // Handle Summary Generation
-  const handleGenerateSummary = async () => {
+  const handleGenerateSummary = async config => {
     if (!documentId) return;
     setLoadingSummary(true);
     setSummaryError('');
+    setSummaryData(null);
+    setSaveError('');
     try {
-      const res = await summarizeDocumentApi(documentId);
-      if (res && res.success && res.data != null) {
-        // Backend trả ApiResponse<String> → res.data là string thuần
-        // Job polling trả { success, data } → data có thể là string hoặc object
-        const text = typeof res.data === 'string'
-          ? res.data
-          : (res.data?.summary || res.data?.summaryText || JSON.stringify(res.data));
-        setSummaryText(text);
+      const res = await summarizeDocumentApi(documentId, config);
+      const result = res?.success ? readAiResult('summary', res.data) : null;
+      if (result) {
+        setSummaryData(result);
       } else {
         setSummaryError(res?.message || 'Không thể tạo tóm tắt lúc này. Vui lòng thử lại.');
       }
@@ -133,26 +128,28 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
   };
 
   // Handle Quiz Generation
-  const handleGenerateQuiz = async () => {
-    if (!documentId) return;
-    setLoadingQuiz(true);
-    setQuizError('');
+  function resetQuiz() {
     setSelectedAnswers({});
     setQuizSubmitted(false);
     setQuizScore(null);
+    setSubmitError('');
+    setAnswerDetails({});
+  }
+
+  const handleGenerateQuiz = async config => {
+    if (!documentId) return;
+    setLoadingQuiz(true);
+    setQuizError('');
+    setQuizData(null);
+    setSaveError('');
+    resetQuiz();
     try {
-      const res = await generateQuizFromDocApi(documentId, 5);
-      if (res && res.success && res.data) {
-        // Job polling returns parsed resultJson which is QuizResponse
-        // Ensure questions array exists
-        const quizResult = res.data;
-        if (quizResult.questions && quizResult.questions.length > 0) {
-          setQuizData(quizResult);
-        } else {
-          setQuizError('AI không thể tạo câu hỏi từ tài liệu này. Vui lòng thử lại.');
-        }
+      const res = await generateQuizFromDocApi(documentId, config ?? 5);
+      const result = res?.success ? readAiResult('quiz', res.data) : null;
+      if (result) {
+        setQuizData(result);
       } else {
-        setQuizError(res?.message || 'Không thể tạo bài trắc nghiệm lúc này.');
+        setQuizError(res?.success ? 'Kết quả trắc nghiệm chưa đúng định dạng. Hãy thử lại.' : res?.message || 'Không thể tạo bài trắc nghiệm lúc này.');
       }
     } catch (e) {
       console.error('[Quiz] Generation error:', e);
@@ -163,41 +160,54 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
   };
 
   // Handle Quiz Option Select
-  const handleSelectQuizOption = (qId, optionKey) => {
-    if (quizSubmitted) return;
-    setSelectedAnswers(prev => ({ ...prev, [qId]: optionKey }));
+  const handleSelectQuizOption = (questionIndex, optionKey) => {
+    if (quizSubmitted || submitting) return;
+    setSelectedAnswers(prev => ({ ...prev, [questionIndex]: optionKey }));
   };
 
-  // Handle Quiz Submission — correctOption is the backend field name (enum A/B/C/D)
   const handleSubmitQuiz = async () => {
-    setQuizSubmitted(true);
+    if (submitting || quizSubmitted || saving) return;
     const questions = quizData?.questions || [];
-    const correct = questions.filter(q => selectedAnswers[q.id] === q.correctOption).length;
-    setQuizScore(correct);
+    setSubmitError('');
+    if (!quizData?.id) {
+      setQuizScore(questions.filter((question, index) =>
+        selectedAnswers[index] && selectedAnswers[index] === question.correctOption
+      ).length);
+      setQuizSubmitted(true);
+      return;
+    }
 
-    if (quizData?.id) {
-      try {
-        const payload = Object.entries(selectedAnswers).map(([qId, ans]) => ({
-          questionId: Number(qId),
-          selectedOption: ans
-        }));
-        await attemptQuizApi(quizData.id, payload);
-      } catch (e) {
-        console.warn('[Quiz] Attempt save error:', e);
+    setSubmitting(true);
+    try {
+      const answers = questions
+        .map((question, index) => ({ questionId: question.id, selectedOption: selectedAnswers[index] }))
+        .filter(answer => answer.questionId != null && answer.selectedOption);
+      const result = await attemptQuizApi(quizData.id, answers);
+      if (!result.success || !Array.isArray(result.data?.details)) {
+        throw new Error(result.message || 'Chưa chấm được bài. Hãy thử nộp lại.');
       }
+      setAnswerDetails(Object.fromEntries(result.data.details.map(detail => [detail.questionId, detail])));
+      setQuizScore(result.data.score);
+      setQuizSubmitted(true);
+    } catch (error) {
+      setSubmitError(error.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   // Handle Mindmap Generation
-  const handleGenerateMindmap = async () => {
+  const handleGenerateMindmap = async config => {
     if (!documentId) return;
     setLoadingMindmap(true);
     setMindmapError('');
+    setMindmapData(null);
+    setSaveError('');
     try {
-      const res = await generateMindmapFromDocApi(documentId);
-      if (res && res.success && res.data) {
-        // Job polling returns MindmapResponse: { id, title, structure: { id, label, children: [...] } }
-        setMindmapData(res.data);
+      const res = await generateMindmapFromDocApi(documentId, config);
+      const result = res?.success ? readAiResult('mindmap', res.data) : null;
+      if (result) {
+        setMindmapData(result);
       } else {
         setMindmapError(res?.message || 'Không thể tạo sơ đồ tư duy lúc này.');
       }
@@ -209,14 +219,55 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
     }
   };
 
+  const resultByType = { quiz: quizData, summary: summaryData, mindmap: mindmapData };
+  const generators = { quiz: handleGenerateQuiz, summary: handleGenerateSummary, mindmap: handleGenerateMindmap };
+  const isGenerating = loadingQuiz || loadingSummary || loadingMindmap;
+  const currentResult = resultByType[activeAiTab];
+
+  async function saveResult(type, data) {
+    if (saving || submitting || isGenerating || !documentId) return;
+    const token = getAuthToken();
+    setSaving(true);
+    setSaveError('');
+    try {
+      if (!readAiResult(type, data)) throw new Error('Hãy điền đầy đủ nội dung trước khi lưu.');
+      if (type === 'quiz' && data.questions.some(question =>
+        ['A', 'B', 'C', 'D'].some(key => !question['option' + key]?.trim() || question['option' + key].length > 500)
+      )) throw new Error('Mỗi câu hỏi cần đủ bốn lựa chọn, tối đa 500 ký tự mỗi lựa chọn.');
+      const field = { quiz: 'questions', summary: 'summary', mindmap: 'structure' }[type];
+      const fallback = { quiz: 'Trắc nghiệm', summary: 'Tóm tắt', mindmap: 'Sơ đồ tư duy' }[type];
+      const response = await saveAiOutputApi(type, {
+        sourceType: 'DOCUMENT',
+        sourceId: documentId,
+        title: (data.title.trim() || fallback).slice(0, 255),
+        [field]: data[field],
+      });
+      if (token !== getAuthToken()) return;
+      const saved = response.success && readAiResult(type, response.data);
+      if (!saved?.id) throw new Error(response.message || 'Chưa lưu được nội dung. Hãy thử lại.');
+      if (type === 'summary') setSummaryData(saved);
+      if (type === 'mindmap') setMindmapData(saved);
+      if (type === 'quiz') {
+        setQuizData(saved);
+        if (editType) resetQuiz();
+      }
+      setEditType(null);
+      onSaved?.(type, saved);
+    } catch (error) {
+      setSaveError(error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // Recursive Mindmap Tree Renderer
-  const renderMindmapNode = (node, depth = 0) => {
+  const renderMindmapNode = (node, depth = 0, position = 0) => {
     if (!node) return null;
     const children = node.children || [];
     const isRoot = depth === 0;
     
     return (
-      <div key={node.id || `node-${depth}`} className={isRoot ? '' : 'ml-4 mt-1.5'}>
+      <div key={position} className={isRoot ? '' : 'ml-4 mt-1.5'}>
         <div className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 ${
           isRoot
             ? 'bg-purple-600 text-white shadow-md'
@@ -229,7 +280,7 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
         </div>
         {children.length > 0 && (
           <div className={`border-l-2 ${isRoot ? 'border-purple-300 dark:border-purple-700' : 'border-slate-200 dark:border-slate-700'} ml-3 pl-1 space-y-0.5`}>
-            {children.map((child, idx) => renderMindmapNode(child, depth + 1))}
+            {children.map((child, idx) => renderMindmapNode(child, depth + 1, idx))}
           </div>
         )}
       </div>
@@ -240,16 +291,11 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
   const renderMarkdownText = (text) => {
     if (!text) return null;
     return text.split('\n').map((line, i) => {
-      // Bold: **text**
-      let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      // Bullet points
       const isBullet = /^\s*[-•]\s/.test(line);
-      if (isBullet) {
-        processed = processed.replace(/^\s*[-•]\s/, '');
-        return <li key={i} className="ml-3 list-disc" dangerouslySetInnerHTML={{ __html: processed }} />;
-      }
       if (line.trim() === '') return <br key={i} />;
-      return <p key={i} dangerouslySetInnerHTML={{ __html: processed }} />;
+      const content = line.replace(/^\s*[-•]\s/, '').split(/\*\*(.+?)\*\*/g)
+        .map((part, index) => index % 2 ? <strong key={index}>{part}</strong> : part);
+      return <p key={i} className={isBullet ? 'ml-3' : undefined}>{isBullet && '• '}{content}</p>;
     });
   };
 
@@ -265,7 +311,7 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
 
     try {
       const res = await askDocumentApi(documentId, userText);
-      if (res && res.success && res.data) {
+      if (res?.success && typeof res.data === 'string' && res.data.trim()) {
         setChatMessages(prev => [...prev, { sender: 'ai', text: res.data }]);
       } else {
         setChatMessages(prev => [
@@ -285,12 +331,11 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
 
   if (!isOpen) return null;
 
-  const pdfUrl = doc?.fileUrl 
-    ? (doc.fileUrl.startsWith('http') ? doc.fileUrl : `http://localhost:8080${doc.fileUrl}`)
-    : '';
+  const pdfUrl = uploadUrl(doc?.fileUrl) || '';
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+    <>
+    <div role="dialog" aria-modal="true" aria-labelledby="document-viewer-title" className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
       <div className={`bg-white dark:bg-[#0B132B] rounded-3xl w-full flex flex-col shadow-2xl border border-slate-200/80 dark:border-slate-800 transition-all duration-300 ${
         isFullScreen ? 'h-[98vh] max-w-[99vw]' : 'h-[92vh] max-w-7xl'
       }`}>
@@ -302,19 +347,17 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
               <FileIcon name={doc?.fileName} />
             </div>
             <div className="min-w-0">
-              <h3 className="font-['Be_Vietnam_Pro'] font-bold text-base sm:text-lg text-slate-900 dark:text-white truncate max-w-sm sm:max-w-md" title={doc?.fileName}>
-                {doc?.fileName || 'Chi tiết tài liệu'}
+              <h3 id="document-viewer-title" className="font-['Be_Vietnam_Pro'] font-bold text-base sm:text-lg text-slate-900 dark:text-white truncate max-w-sm sm:max-w-md" title={doc?.fileName}>
+                {savedItem?.title || doc?.fileName || 'Chi tiết tài liệu'}
               </h3>
-              <p className="text-xs text-slate-400 font-medium flex items-center gap-2">
-                <span>{doc?.fileType?.toUpperCase() || 'FILE'}</span>
-                <span>•</span>
-                <span>{doc?.uploadDate ? new Date(doc.uploadDate).toLocaleDateString('vi-VN') : 'Hôm nay'}</span>
+              <p className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+                {reviewing ? note?.title || doc?.fileName || 'Nội dung đã lưu' : doc?.fileType || 'Tài liệu học tập'}
               </p>
             </div>
           </div>
 
           {/* Center: View Mode Toggle */}
-          <div className="hidden sm:flex items-center gap-1 bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-2xl">
+          {pdfUrl && doc?.fileName?.toLowerCase().endsWith('.pdf') && <div className="hidden sm:flex items-center gap-1 bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-2xl">
             <button
               onClick={() => setDocViewMode('pdf')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
@@ -337,7 +380,7 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
               <FileText className="w-3.5 h-3.5" />
               <span>Văn bản trích xuất</span>
             </button>
-          </div>
+          </div>}
 
           {/* Right Action Icons */}
           <div className="flex items-center gap-2">
@@ -362,6 +405,7 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
             </button>
             <button
               onClick={onClose}
+              aria-label={reviewing ? 'Đóng nội dung ôn tập' : 'Đóng tài liệu'}
               className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-500 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -370,11 +414,13 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
         </div>
 
         {/* ── 2. Split-View Body ────────────────────────────────────────── */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 overflow-hidden divide-y lg:divide-y-0 lg:divide-x divide-slate-100 dark:divide-slate-800/80">
+        <div className={`flex-1 grid min-h-0 overflow-hidden ${documentId || note ? 'grid-rows-[minmax(0,2fr)_minmax(0,3fr)] divide-y divide-slate-100 dark:divide-slate-800/80 lg:grid-cols-12 lg:grid-rows-1 lg:divide-x lg:divide-y-0' : 'grid-rows-1'}`}>
           
           {/* ── LEFT PANE: Document Reader (7 / 12 cols = ~58%) ────────── */}
-          <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-100/50 dark:bg-[#070D1F]/50 relative">
-            {loadingDoc ? (
+          {(documentId || note) && <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-100/50 dark:bg-[#070D1F]/50 relative">
+            {note ? (
+              <div className="overflow-y-auto whitespace-pre-wrap break-words p-5 text-sm">{note.content || 'Ghi chú chưa có nội dung.'}</div>
+            ) : loadingDoc ? (
               <div className="flex flex-col items-center justify-center h-full space-y-3">
                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                 <p className="text-xs font-semibold text-slate-400">Đang tải tài liệu...</p>
@@ -406,16 +452,16 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                 )}
               </div>
             )}
-          </div>
+          </div>}
 
           {/* ── RIGHT PANE: Split-View AI Assistant (5 / 12 cols = ~42%) ── */}
           <div className="lg:col-span-5 flex flex-col min-h-0 bg-white dark:bg-[#0B132B]">
             
             {/* AI Action Tabs */}
-            <div className="flex items-center gap-1 p-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-[#0E1738]/50 overflow-x-auto">
+            {!reviewing && <div className="flex items-center gap-1 p-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-[#0E1738]/50 overflow-x-auto">
               {[
                 { id: 'summary', icon: Sparkles, label: 'Tóm tắt', color: 'text-amber-500' },
-                { id: 'quiz', icon: HelpCircle, label: 'Làm Quiz', color: 'text-emerald-500' },
+                { id: 'quiz', icon: HelpCircle, label: 'Trắc nghiệm', color: 'text-emerald-500' },
                 { id: 'mindmap', icon: Brain, label: 'Sơ đồ tư duy', color: 'text-purple-500' },
                 { id: 'chat', icon: MessageSquare, label: 'Hỏi đáp AI', color: 'text-blue-500' },
               ].map(tab => {
@@ -424,12 +470,8 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => {
-                      setActiveAiTab(tab.id);
-                      if (tab.id === 'summary' && !summaryText && !loadingSummary) handleGenerateSummary();
-                      if (tab.id === 'quiz' && !quizData && !loadingQuiz) handleGenerateQuiz();
-                      if (tab.id === 'mindmap' && !mindmapData && !loadingMindmap) handleGenerateMindmap();
-                    }}
+                    aria-pressed={isActive}
+                    onClick={() => { setActiveAiTab(tab.id); setSaveError(''); }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
@@ -441,10 +483,28 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                   </button>
                 );
               })}
-            </div>
+            </div>}
 
+            {reviewing && !savedResult && <p role="alert" className="p-5 text-sm text-red-700 dark:text-red-300">Nội dung đã lưu chưa đọc được.</p>}
             {/* AI Panel Body */}
             <div className="flex-1 overflow-y-auto p-5 min-h-0">
+              {!reviewing && activeAiTab !== 'chat' && <div className="mb-4 space-y-2 border-b border-slate-200 pb-4 dark:border-slate-800">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className="secondary-button" disabled={saving || submitting || isGenerating}
+                    onClick={() => setConfigType(activeAiTab)}>Tùy chọn tạo</button>
+                  {currentResult && !currentResult.id && <>
+                    <button type="button" className="primary-button" disabled={saving || submitting || isGenerating}
+                      onClick={() => saveResult(activeAiTab, currentResult)}>{saving ? 'Đang lưu…' : 'Lưu vào Ôn tập'}</button>
+                    <button type="button" className="secondary-button" disabled={saving || submitting || isGenerating}
+                      onClick={() => setEditType(activeAiTab)}>Chỉnh sửa trước khi lưu</button>
+                  </>}
+                  {currentResult?.id && <>
+                    <span role="status" className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Đã lưu vào Ôn tập</span>
+                    <button className="secondary-button" onClick={onOpenReview}>Xem trong Ôn tập</button>
+                  </>}
+                </div>
+                {saveError && !editType && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{saveError}</p>}
+              </div>}
               
               {/* TAB 1: SUMMARY */}
               {activeAiTab === 'summary' && (
@@ -452,14 +512,14 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tóm tắt nội dung chính</span>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleGenerateSummary}
-                        disabled={loadingSummary}
+                      {!reviewing && summaryData && <button
+                        onClick={() => handleGenerateSummary()}
+                        disabled={saving || submitting || isGenerating}
                         title="Tạo lại tóm tắt"
                         className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all"
                       >
                         <RefreshCw className={`w-4 h-4 ${loadingSummary ? 'animate-spin' : ''}`} />
-                      </button>
+                      </button>}
                       {summaryText && (
                         <button
                           onClick={() => {
@@ -486,7 +546,7 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                       <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
                       <p className="text-xs text-red-500 font-medium">{summaryError}</p>
                       <button
-                        onClick={handleGenerateSummary}
+                        onClick={() => handleGenerateSummary()}
                         className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all"
                       >
                         Thử lại
@@ -496,15 +556,15 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                     <div className="p-4 rounded-2xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-['Inter']">
                       {renderMarkdownText(summaryText)}
                     </div>
-                  ) : (
+                  ) : !reviewing && (
                     <div className="py-12 text-center space-y-3">
                       <Sparkles className="w-10 h-10 text-amber-400 mx-auto" />
                       <p className="text-xs text-slate-400">Bấm nút bên dưới để tạo bản tóm tắt tự động bằng AI</p>
                       <button
-                        onClick={handleGenerateSummary}
+                        onClick={() => handleGenerateSummary()}
                         className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all"
                       >
-                        Tạo Tóm Tắt Ngay
+                        Tạo tóm tắt
                       </button>
                     </div>
                   )}
@@ -518,15 +578,15 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                       {quizSubmitted ? `Kết quả: ${quizScore}/${quizData?.questions?.length || 0} điểm` : 'Kiểm tra độ hiểu bài'}
                     </span>
-                    <button
-                      onClick={handleGenerateQuiz}
-                      disabled={loadingQuiz}
+                    {!reviewing && quizData && <button
+                      onClick={() => handleGenerateQuiz()}
+                      disabled={saving || submitting || isGenerating}
                       title="Sinh bộ câu hỏi mới"
                       className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${loadingQuiz ? 'animate-spin' : ''}`} />
                       <span>Đổi đề mới</span>
-                    </button>
+                    </button>}
                   </div>
 
                   {loadingQuiz ? (
@@ -543,17 +603,19 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                           { key: 'C', text: q.optionC },
                           { key: 'D', text: q.optionD },
                         ].filter(o => o.text);
-                        const correctKey = q.correctOption;
+                        const detail = answerDetails[q.id];
+                        const correctKey = detail?.correctOption ?? q.correctOption;
+                        const explanation = detail?.explanation ?? q.explanation;
 
                         return (
-                          <div key={q.id || idx} className="p-4 rounded-2xl bg-slate-50 dark:bg-[#131E3D] border border-slate-100 dark:border-slate-800 space-y-3">
+                          <div key={idx} className="p-4 rounded-2xl bg-slate-50 dark:bg-[#131E3D] border border-slate-100 dark:border-slate-800 space-y-3">
                             <p className="font-['Be_Vietnam_Pro'] font-bold text-xs text-slate-900 dark:text-white">
                               Câu {idx + 1}: {q.questionText || q.text}
                             </p>
 
                             <div className="space-y-1.5">
                               {options.map(({ key, text }) => {
-                                const isSelected = selectedAnswers[q.id] === key;
+                                const isSelected = selectedAnswers[idx] === key;
                                 const isCorrect = correctKey === key;
                                 let btnClass = "bg-white dark:bg-[#1A2548] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400";
 
@@ -567,7 +629,9 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                                 return (
                                   <button
                                     key={key}
-                                    onClick={() => handleSelectQuizOption(q.id, key)}
+                                    onClick={() => handleSelectQuizOption(idx, key)}
+                                    aria-pressed={isSelected}
+                                    disabled={submitting || quizSubmitted}
                                     className={`w-full p-2.5 rounded-xl border text-left text-xs transition-all flex items-center justify-between ${btnClass}`}
                                   >
                                     <span><strong>{key}.</strong> {text}</span>
@@ -577,22 +641,31 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                               })}
                             </div>
 
-                            {quizSubmitted && q.explanation && (
+                            {quizSubmitted && explanation && (
                               <p className="p-2.5 bg-blue-50 dark:bg-blue-950/40 rounded-xl text-[11px] text-blue-900 dark:text-blue-200 leading-relaxed border border-blue-100 dark:border-blue-900/40">
-                                💡 <strong>Giải thích:</strong> {q.explanation}
+                                💡 <strong>Giải thích:</strong> {explanation}
                               </p>
                             )}
                           </div>
                         );
                       })}
 
-                      {!quizSubmitted && (
+                      {submitError && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{submitError}</p>}
+                      {quizSubmitted ? (
+                        <button type="button" className="secondary-button" onClick={resetQuiz}>Làm lại bài này</button>
+                      ) : (
+                        <>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                          {quizData.id ? 'Điểm sẽ được ghi vào thống kê của bạn.' : 'Bạn có thể làm ngay. Lưu vào Ôn tập trước khi nộp nếu muốn ghi điểm vào thống kê.'}
+                        </p>
                         <button
                           onClick={handleSubmitQuiz}
+                          disabled={submitting || saving}
                           className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                         >
-                          Nộp bài & Chấm điểm tức thì
+                          {submitting ? 'Đang chấm bài…' : 'Nộp bài'}
                         </button>
+                        </>
                       )}
                     </div>
                   ) : quizError ? (
@@ -600,18 +673,18 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                       <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
                       <p className="text-xs text-red-500 font-medium">{quizError}</p>
                       <button
-                        onClick={handleGenerateQuiz}
+                        onClick={() => handleGenerateQuiz()}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                       >
                         Thử lại
                       </button>
                     </div>
-                  ) : (
+                  ) : !reviewing && (
                     <div className="py-12 text-center space-y-3">
                       <HelpCircle className="w-10 h-10 text-emerald-400 mx-auto" />
                       <p className="text-xs text-slate-400">Kiểm tra khả năng ghi nhớ nội dung bài giảng vừa đọc</p>
                       <button
-                        onClick={handleGenerateQuiz}
+                        onClick={() => handleGenerateQuiz()}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                       >
                         Tạo Bài Trắc Nghiệm (5 câu)
@@ -626,14 +699,14 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                 <div className="space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cây sơ đồ tư duy</span>
-                    <button
-                      onClick={handleGenerateMindmap}
-                      disabled={loadingMindmap}
+                    {!reviewing && mindmapData && <button
+                      onClick={() => handleGenerateMindmap()}
+                      disabled={saving || submitting || isGenerating}
                       title="Vẽ lại sơ đồ"
                       className="p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-slate-800 transition-all"
                     >
                       <RefreshCw className={`w-4 h-4 ${loadingMindmap ? 'animate-spin' : ''}`} />
-                    </button>
+                    </button>}
                   </div>
 
                   {loadingMindmap ? (
@@ -650,21 +723,21 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
                       <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
                       <p className="text-xs text-red-500 font-medium">{mindmapError}</p>
                       <button
-                        onClick={handleGenerateMindmap}
+                        onClick={() => handleGenerateMindmap()}
                         className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                       >
                         Thử lại
                       </button>
                     </div>
-                  ) : (
+                  ) : !reviewing && (
                     <div className="py-12 text-center space-y-3">
                       <Brain className="w-10 h-10 text-purple-400 mx-auto" />
                       <p className="text-xs text-slate-400">Phác họa trực quan cấu trúc chương mục và định lý</p>
                       <button
-                        onClick={handleGenerateMindmap}
+                        onClick={() => handleGenerateMindmap()}
                         className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                       >
-                        Vẽ Sơ Đồ Tư Duy
+                        Tạo sơ đồ tư duy
                       </button>
                     </div>
                   )}
@@ -746,5 +819,16 @@ export default function DocumentSplitViewerModal({ isOpen, onClose, documentId }
 
       </div>
     </div>
+    {configType && <AiGenerateModal
+      isOpen type={configType} docId={documentId} onClose={() => setConfigType(null)}
+      onGenerate={(type, _id, config) => { setConfigType(null); generators[type](config); }}
+    />}
+    {editType && resultByType[editType] && <AiPreviewPanel
+      type={editType} data={resultByType[editType]} busy={saving} error={saveError}
+      onClose={() => { setEditType(null); setSaveError(''); }}
+      onSave={data => saveResult(editType, data)}
+      onRegenerate={() => { setConfigType(editType); setEditType(null); setSaveError(''); }}
+    />}
+    </>
   );
 }

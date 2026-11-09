@@ -9,7 +9,7 @@
   "studyTimeDesc": "Bạn đã dành <1>{{hours}} giờ</1> để học tập trong hôm nay. Mục tiêu của bạn là {{goal}} giờ.",
   "exercises": "Bài tập",
   "notes": "Ghi chú",
-  "streak": "Streak",
+  "streak": "Chuỗi ngày học",
   "streakDays": "{{count}} ngày",
   "nextClass": "Tiếp theo",
   "startNow": "Bắt đầu ngay",

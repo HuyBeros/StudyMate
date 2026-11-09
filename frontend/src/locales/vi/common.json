@@ -1,35 +1,32 @@
 {
-  "appName": "EduFlow",
+  "appName": "StudyMate",
   "tagline": "Học thông minh hơn mỗi ngày",
-
   "nav": {
     "dashboard": "Bảng điều khiển",
     "subjects": "Môn học",
     "schedule": "Lịch học",
+    "studyRooms": "Phòng học",
     "aiTutor": "AI Trợ lý",
     "statistics": "Thống kê",
     "profile": "Hồ sơ",
     "settings": "Cài đặt",
     "help": "Trợ giúp",
-    "newSession": "Phiên học mới"
+    "newSession": "Thêm nhiệm vụ"
   },
-
   "header": {
-    "searchPlaceholder": "Tìm kiếm tài liệu, bài giảng...",
-    "darkMode": "Chế độ tối (Dark Mode)",
+    "searchPlaceholder": "Tìm môn học, nhiệm vụ, lịch học…",
+    "darkMode": "Chế độ tối",
     "profile": "Thông tin cá nhân",
     "logout": "Đăng xuất",
     "language": "Ngôn ngữ",
     "notLoggedIn": "Bạn chưa đăng nhập",
     "login": "Đăng nhập"
   },
-
   "language": {
     "title": "Ngôn ngữ",
     "vi": "Tiếng Việt",
     "en": "English"
   },
-
   "button": {
     "save": "Lưu",
     "cancel": "Hủy",
@@ -42,11 +39,9 @@
     "viewAll": "Xem tất cả",
     "addNew": "+ Thêm mới"
   },
-
   "empty": {
     "noData": "Chưa có dữ liệu"
   },
-
   "time": {
     "today": "Hôm nay",
     "yesterday": "Hôm qua",

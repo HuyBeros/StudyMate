@@ -1,6 +1,8 @@
 package com.huyberos.studymate.service;
 
+import com.huyberos.studymate.dto.request.ConflictCheckRequest;
 import com.huyberos.studymate.dto.request.ScheduleSlotRequest;
+import com.huyberos.studymate.dto.response.ConflictCheckResponse;
 import com.huyberos.studymate.dto.response.ScheduleSlotResponse;
 import com.huyberos.studymate.entity.ScheduleSlot;
 import com.huyberos.studymate.entity.Subject;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -61,6 +64,64 @@ public class ScheduleSlotService {
         return scheduleSlotRepository.findTodaySlots(userId, dayOfWeek, today).stream()
                 .map(ScheduleSlotResponse::fromEntity)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ConflictCheckResponse checkConflict(ConflictCheckRequest request) {
+        Long userId = securityUtil.getCurrentUserId();
+        List<ScheduleSlot> existingSlots = scheduleSlotRepository.findAllByUserId(userId);
+
+        DayOfWeek day = request.getDayOfWeek();
+        if (day == null && request.getDate() != null) {
+            day = ScheduleSlotService.mapJavaDayOfWeekToEnum(request.getDate().getDayOfWeek());
+        }
+        LocalTime start = request.getStartTime();
+        LocalTime end = request.getEndTime();
+
+        if (day == null || start == null || end == null) {
+            return ConflictCheckResponse.builder()
+                    .hasConflict(false)
+                    .conflictType("NONE")
+                    .message("Dữ liệu vào không đầy đủ để kiểm tra")
+                    .build();
+        }
+
+        for (ScheduleSlot existing : existingSlots) {
+            // Skip checking the same slot when updating
+            if (request.getId() != null && existing.getId().equals(request.getId())) {
+                continue;
+            }
+
+            if (existing.getIsRecurring() && existing.getDayOfWeek() == day) {
+                // Overlap check
+                if (start.isBefore(existing.getEndTime()) && end.isAfter(existing.getStartTime())) {
+                    return ConflictCheckResponse.builder()
+                            .hasConflict(true)
+                            .conflictType("HARD_CONFLICT")
+                            .message("Xung đột thời gian với lịch học môn: " + existing.getSubject().getName() +
+                                    " (" + existing.getStartTime() + " - " + existing.getEndTime() + ")")
+                            .build();
+                }
+
+                // Soft warning check (less than 15 mins gap)
+                long startDiff = Math.abs(java.time.Duration.between(end, existing.getStartTime()).toMinutes());
+                long endDiff = Math.abs(java.time.Duration.between(start, existing.getEndTime()).toMinutes());
+                if (startDiff < 15 || endDiff < 15) {
+                    return ConflictCheckResponse.builder()
+                            .hasConflict(true)
+                            .conflictType("SOFT_WARNING")
+                            .message("Lịch học rất sát với tiết học môn: " + existing.getSubject().getName() +
+                                    " (cách khoảng " + Math.min(startDiff, endDiff) + " phút)")
+                            .build();
+                }
+            }
+        }
+
+        return ConflictCheckResponse.builder()
+                .hasConflict(false)
+                .conflictType("NONE")
+                .message("Không phát hiện xung đột lịch trình")
+                .build();
     }
 
     @Transactional

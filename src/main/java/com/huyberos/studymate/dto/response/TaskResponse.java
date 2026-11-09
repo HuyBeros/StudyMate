@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class TaskResponse {
 
     private Long id;
+    private java.util.UUID publicId;
     private Long subjectId;
     private String subjectName;
     private String subjectColor;
@@ -34,6 +35,7 @@ public class TaskResponse {
 
         return TaskResponse.builder()
                 .id(task.getId())
+                .publicId(task.getPublicId())
                 .subjectId(task.getSubject() != null ? task.getSubject().getId() : null)
                 .subjectName(task.getSubject() != null ? task.getSubject().getName() : null)
                 .subjectColor(task.getSubject() != null ? task.getSubject().getColor() : null)

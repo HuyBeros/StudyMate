@@ -20,6 +20,7 @@ public class SubjectService {
 
     private final SubjectRepository subjectRepository;
     private final SecurityUtil securityUtil;
+    private final com.huyberos.studymate.study.StudyAccountCoordinator studyAccounts;
 
     @Transactional(readOnly = true)
     public List<SubjectResponse> getAllSubjects(SubjectType type) {
@@ -45,7 +46,7 @@ public class SubjectService {
 
     @Transactional
     public SubjectResponse createSubject(SubjectRequest request) {
-        User currentUser = securityUtil.getCurrentUser();
+        User currentUser = studyAccounts.lockCurrent();
 
         Subject subject = Subject.builder()
                 .user(currentUser)
@@ -56,12 +57,14 @@ public class SubjectService {
                 .build();
 
         Subject saved = subjectRepository.save(subject);
+        studyAccounts.bump(currentUser);
         return SubjectResponse.fromEntity(saved);
     }
 
     @Transactional
     public SubjectResponse updateSubject(Long id, SubjectRequest request) {
-        Long userId = securityUtil.getCurrentUserId();
+        var currentUser = studyAccounts.lockCurrent();
+        Long userId = currentUser.getId();
         Subject subject = subjectRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found with id: " + id));
 
@@ -75,15 +78,18 @@ public class SubjectService {
         subject.setClassCode(request.getClassCode());
 
         Subject updated = subjectRepository.save(subject);
+        studyAccounts.bump(currentUser);
         return SubjectResponse.fromEntity(updated);
     }
 
     @Transactional
     public void deleteSubject(Long id) {
-        Long userId = securityUtil.getCurrentUserId();
+        var currentUser = studyAccounts.lockCurrent();
+        Long userId = currentUser.getId();
         Subject subject = subjectRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found with id: " + id));
 
         subjectRepository.delete(subject);
+        studyAccounts.bump(currentUser);
     }
 }

@@ -1,36 +1,32 @@
 {
-  "title": "Thống Kê Học Tập",
+  "title": "Thống kê học tập",
   "subtitle": "Theo dõi tiến độ và hiệu quả học tập của bạn",
   "aiInsight": "AI Gợi Ý",
   "aiInsightText": "Dựa trên dữ liệu học tập gần đây, bạn nên tập trung ôn tập các môn có tỷ lệ hoàn thành thấp và dành thêm thời gian cho các bài quiz chưa đạt điểm cao.",
   "generateInsight": "Xem Gợi Ý Chi Tiết →",
-
   "cards": {
-    "studyHours": "Giờ Học Tuần Này",
-    "totalTasks": "Tổng Nhiệm Vụ",
-    "totalSubjects": "Tổng Môn Học",
-    "streak": "Chuỗi Ngày Học",
-    "completion": "Hoàn Thành",
+    "studyHours": "Giờ tập trung tuần này",
+    "totalTasks": "Tổng nhiệm vụ",
+    "totalSubjects": "Tổng môn học",
+    "streak": "Chuỗi ngày học",
+    "completion": "Hoàn thành",
     "days": "ngày"
   },
-
   "charts": {
-    "studyHoursTitle": "Giờ Học Theo Ngày",
+    "studyHoursTitle": "Giờ tập trung theo ngày",
     "studyHoursDesc": "So sánh thời gian học trong tuần",
-    "taskCompletionTitle": "Tình Trạng Nhiệm Vụ",
+    "taskCompletionTitle": "Trạng thái nhiệm vụ",
     "taskCompletionDesc": "Phân bổ trạng thái nhiệm vụ",
-    "subjectMasteryTitle": "Tiến Độ Theo Môn",
-    "subjectMasteryDesc": "Tỷ lệ hoàn thành task từng môn",
-    "quizPerformanceTitle": "Hiệu Suất Quiz",
+    "subjectMasteryTitle": "Tiến độ theo môn",
+    "subjectMasteryDesc": "Tỷ lệ hoàn thành nhiệm vụ từng môn",
+    "quizPerformanceTitle": "Kết quả trắc nghiệm",
     "quizPerformanceDesc": "Điểm trung bình theo thời gian"
   },
-
   "taskStatus": {
     "todo": "Chưa làm",
     "doing": "Đang làm",
     "done": "Hoàn thành"
   },
-
   "weekDays": {
     "mon": "T2",
     "tue": "T3",
@@ -40,7 +36,6 @@
     "sat": "T7",
     "sun": "CN"
   },
-
   "noData": "Chưa có dữ liệu thống kê",
   "noDataHint": "Hãy bắt đầu sử dụng ứng dụng để xem dữ liệu tại đây"
 }

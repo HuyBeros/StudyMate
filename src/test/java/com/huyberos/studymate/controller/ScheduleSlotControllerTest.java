@@ -44,13 +44,13 @@ class ScheduleSlotControllerTest {
 
         RegisterRequest regRequest = new RegisterRequest();
         regRequest.setEmail(email);
-        regRequest.setPassword("123456");
+        regRequest.setPassword("StudyTest123!");
         regRequest.setFullName("Schedule Tester");
 
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(regRequest)))
-                .andReturn();
+                .andExpect(status().isCreated()).andReturn();
 
         String responseStr = result.getResponse().getContentAsString();
         token = objectMapper.readTree(responseStr).path("data").path("accessToken").asText();
@@ -66,7 +66,7 @@ class ScheduleSlotControllerTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(subjectReq)))
-                .andReturn();
+                .andExpect(status().isCreated()).andReturn();
 
         subjectId = objectMapper.readTree(subResult.getResponse().getContentAsString())
                 .path("data").path("id").asLong();
@@ -98,6 +98,20 @@ class ScheduleSlotControllerTest {
 
         long slotId = objectMapper.readTree(createResult.getResponse().getContentAsString())
                 .path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/schedule/check-conflict")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"dayOfWeek":"THU_2","startTime":"08:00","endTime":"09:00"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.conflictType").value("HARD_CONFLICT"));
+
+        mockMvc.perform(get("/api/schedule/export/ics")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("BEGIN:VEVENT")));
 
         // 2. Lấy danh sách lịch học
         mockMvc.perform(get("/api/schedule")

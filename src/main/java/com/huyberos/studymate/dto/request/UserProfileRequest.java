@@ -12,6 +12,4 @@ public class UserProfileRequest {
     @Size(max = 500, message = "Avatar URL must not exceed 500 characters")
     private String avatarUrl;
 
-    @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
-    private String newPassword;
 }

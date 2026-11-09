@@ -1,6 +1,8 @@
 package com.huyberos.studymate.dto.request;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -8,19 +10,26 @@ import lombok.Data;
 @Data
 public class RegisterRequest {
 
-    @NotBlank(message = "Email is required")
+    @Pattern(regexp = "[A-Za-z0-9_][A-Za-z0-9_.-]{2,31}", message = "Tên người dùng phải có 3–32 ký tự, gồm chữ không dấu, số, dấu gạch dưới, chấm hoặc gạch ngang.")
+    private String username;
+
     @Email(message = "Invalid email format")
+    @Size(max = 255)
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
-    @jakarta.validation.constraints.Pattern(
+    @Size(min = 8, max = 72, message = "Mật khẩu phải có từ 8 đến 72 ký tự.")
+    @Pattern(
             regexp = "^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
-            message = "Password must contain at least 1 uppercase letter, 1 digit, and 1 special character (@$!%*?&)"
+            message = "Mật khẩu cần ít nhất 1 chữ hoa, 1 chữ số và 1 ký tự đặc biệt (@$!%*?&)."
     )
     private String password;
 
-    @NotBlank(message = "Full name is required")
     @Size(max = 255)
     private String fullName;
+
+    @AssertTrue(message = "Hãy nhập tên người dùng hoặc email.")
+    public boolean isRegistrationIdentityValid() {
+        return username != null ? email == null : email != null && !email.isBlank();
+    }
 }

@@ -1,0 +1,17 @@
+**
+!pom.xml
+!frontend/
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/index.html
+!frontend/vite.config.js
+!frontend/public/
+!frontend/public/**
+!frontend/src/
+!frontend/src/**
+!src/
+!src/main/
+!src/main/**
+src/main/resources/static/
+src/main/resources/application-local.*
+**/.env*

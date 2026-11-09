@@ -25,12 +25,15 @@ public class User {
     @SequenceGenerator(name = "app_user_seq", sequenceName = "app_user_id_seq", allocationSize = 1)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(unique = true, length = 255)
     private String email;
 
+    @Column(unique = true, length = 32)
+    private String username;
+
     /**
-     * Nullable — chỉ có giá trị khi provider = LOCAL.
-     * OAuth users (Google/Facebook) không có password.
+     * Nullable for accounts created through OAuth.
+     * A LOCAL account linked to Google retains its password for email login.
      */
     @Column(name = "password_hash", length = 255)
     private String passwordHash;

@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, CheckCircle2, AlertCircle, Copy, Sparkles, Brain, Plus, Calendar, Clock, BookOpen, User, MapPin, Loader2, Award, Trash2, Edit3
+  X, CheckCircle2, AlertCircle, Copy, Sparkles, Brain, Plus, Clock, BookOpen, User, MapPin, Loader2, Award, Trash2, Edit3
 } from 'lucide-react';
 import { 
   createSubjectApi, 
   updateSubjectApi,
   createTaskApi, 
-  createScheduleSlotApi, 
-  updateScheduleSlotApi,
   generateQuizFromNoteApi, 
   generateQuizFromDocApi, 
   attemptQuizApi, 
   summarizeNoteApi, 
   summarizeDocumentApi, 
   generateMindmapFromNoteApi, 
-  generateMindmapFromDocApi,
-  checkScheduleConflictApi
+  generateMindmapFromDocApi
 } from '../services/api';
 
 // ── 1. QUIZ MODAL (Real AI Quiz Generation & Interactive Attempt) ─────────────
@@ -109,19 +106,18 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
 
   if (!isOpen) return null;
 
-  const handleSelect = (qId, optionKey) => {
+  const handleSelect = (questionIndex, optionKey) => {
     if (submitted) return;
-    setSelectedAnswers(prev => ({ ...prev, [qId]: optionKey }));
+    setSelectedAnswers(prev => ({ ...prev, [questionIndex]: optionKey }));
   };
 
   const handleSubmitAttempt = async () => {
     setSubmitted(true);
     if (quizData?.id && quizData.id !== 999) {
       try {
-        const answersArray = Object.entries(selectedAnswers).map(([qId, ans]) => ({
-          questionId: Number(qId),
-          selectedOption: ans
-        }));
+        const answersArray = questions
+          .map((question, index) => ({ questionId: question.id, selectedOption: selectedAnswers[index] }))
+          .filter(answer => answer.questionId != null && answer.selectedOption);
         const res = await attemptQuizApi(quizData.id, answersArray);
         if (res && res.success) {
           setAttemptResult(res.data);
@@ -133,7 +129,9 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
   };
 
   const questions = quizData?.questions || [];
-  const correctCount = questions.filter(q => selectedAnswers[q.id] === (q.correctAnswer || q.correct)).length;
+  const correctCount = questions.filter((question, index) =>
+    selectedAnswers[index] && selectedAnswers[index] === (question.correctOption || question.correctAnswer || question.correct)
+  ).length;
   const qMin = String(Math.floor(timeLeft / 60)).padStart(2, '0');
   const qSec = String(timeLeft % 60).padStart(2, '0');
 
@@ -198,17 +196,17 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
                 { key: 'D', text: q.optionD },
               ].filter(o => o.text);
 
-              const correctKey = q.correctAnswer || q.correct;
+              const correctKey = q.correctOption || q.correctAnswer || q.correct;
 
               return (
-                <div key={q.id || idx} className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-[#172136] border border-slate-200/60 dark:border-slate-800">
+                <div key={idx} className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-[#172136] border border-slate-200/60 dark:border-slate-800">
                   <h4 className="font-['Be_Vietnam_Pro'] font-bold text-sm text-slate-900 dark:text-white">
                     Câu {idx + 1}: {q.questionText || q.text}
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {options.map(({ key, text }) => {
-                      const isSelected = selectedAnswers[q.id] === key;
+                      const isSelected = selectedAnswers[idx] === key;
                       const isCorrect = correctKey === key;
 
                       let btnStyle = "bg-white dark:bg-[#111C32] border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800";
@@ -222,7 +220,8 @@ export function QuizModal({ isOpen, onClose, noteId, docId }) {
                       return (
                         <button
                           key={key}
-                          onClick={() => handleSelect(q.id, key)}
+                          onClick={() => handleSelect(idx, key)}
+                          aria-pressed={isSelected}
                           className={`p-3 rounded-xl border text-left text-xs transition-all flex items-center justify-between ${btnStyle}`}
                         >
                           <span><strong>{key}.</strong> {text}</span>
@@ -584,7 +583,7 @@ export function CreateSubjectModal({ isOpen, onClose, onAddSubject, subjectToEdi
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
+      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-blue-600" />
@@ -675,17 +674,12 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (subjects.length > 0 && !subjectId) {
-      setSubjectId(subjects[0].id);
-    }
-  }, [subjects]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !subjectId) return;
+    if (!title.trim()) return;
     setLoading(true);
     setError('');
 
@@ -697,10 +691,11 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
 
     try {
       const res = await createTaskApi({
-        subjectId: Number(subjectId),
-        title,
+        subjectId: subjectId ? Number(subjectId) : null,
+        title: title.trim(),
+        priority,
         status: 'TODO',
-        deadline: deadlineIso
+        dueAt: deadlineIso
       });
       if (res && res.success) {
         onAddTask();
@@ -720,7 +715,7 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
+      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
             <Plus className="w-5 h-5 text-blue-600" />
@@ -739,6 +734,7 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="form-label">Mức ưu tiên<select className="field" value={priority} onChange={e => setPriority(e.target.value)}><option value="LOW">Bình thường</option><option value="MEDIUM">Trung bình</option><option value="HIGH">Cao</option></select></label>
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tên nhiệm vụ *</label>
             <input
@@ -752,13 +748,13 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Môn học liên quan *</label>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Môn học liên quan (tùy chọn)</label>
             <select
               value={subjectId}
               onChange={(e) => setSubjectId(e.target.value)}
-              required
               className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
             >
+              <option value="">Nhiệm vụ chung</option>
               {subjects.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -767,7 +763,7 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Hạn chót (Ngày)</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Hạn chót (ngày)</label>
               <input
                 type="date"
                 value={deadlineDate}
@@ -776,7 +772,7 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Giờ (Tùy chọn)</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Giờ (tùy chọn)</label>
               <input
                 type="time"
                 value={deadlineTime}
@@ -798,548 +794,13 @@ export function CreateTaskModal({ isOpen, onClose, subjects = [], onAddTask }) {
   );
 }
 
-// ── 6. CREATE SCHEDULE SLOT MODAL (Real API Call) ─────────────────────────────
-const PERIODS_MAP = {
-  SANG: [
-    { value: 'CUSTOM', label: 'Tự chọn giờ...' },
-    { value: '07:00-09:25', label: 'Tiết 1 - 3 (07:00 - 09:25)' },
-    { value: '09:30-12:00', label: 'Tiết 4 - 6 (09:30 - 12:00)' }
-  ],
-  CHIEU: [
-    { value: 'CUSTOM', label: 'Tự chọn giờ...' },
-    { value: '12:30-14:55', label: 'Tiết 7 - 9 (12:30 - 14:55)' },
-    { value: '15:05-17:30', label: 'Tiết 10 - 12 (15:05 - 17:30)' }
-  ],
-  TOI: [
-    { value: 'CUSTOM', label: 'Tự chọn giờ...' },
-    { value: '18:00-20:30', label: 'Tiết 13 - 15 (18:00 - 20:30)' }
-  ]
-};
-
-const ALL_DAYS = [
-  { value: 'THU_2', label: 'Thứ 2' },
-  { value: 'THU_3', label: 'Thứ 3' },
-  { value: 'THU_4', label: 'Thứ 4' },
-  { value: 'THU_5', label: 'Thứ 5' },
-  { value: 'THU_6', label: 'Thứ 6' },
-  { value: 'THU_7', label: 'Thứ 7' },
-  { value: 'CHU_NHAT', label: 'Chủ Nhật' },
-];
-
-const DAY_LABELS = Object.fromEntries(ALL_DAYS.map(d => [d.value, d.label]));
-
-export function CreateScheduleModal({ isOpen, onClose, subjects = [], onAddSlot, slotToEdit = null, defaultDay = null }) {
-  const [subjectId, setSubjectId] = useState('');
-  const [selectedDays, setSelectedDays] = useState(['THU_2']);
-  const [isDaysDropdownOpen, setIsDaysDropdownOpen] = useState(false);
-  const [shift, setShift] = useState('SANG');
-  const [startTime, setStartTime] = useState('08:00');
-  const [endTime, setEndTime] = useState('10:30');
-  const [room, setRoom] = useState('');
-  const [teacherName, setTeacherName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const [isRecurring, setIsRecurring] = useState(true);
-  const [date, setDate] = useState(() => new Date().toISOString().substring(0, 10));
-  const [selectedPeriod, setSelectedPeriod] = useState('CUSTOM');
-  const [conflictWarning, setConflictWarning] = useState(null);
-  const [conflictAlertMsg, setConflictAlertMsg] = useState(null);
-
-  // State cho Môn học mới (Inlined)
-  const [newSubjectName, setNewSubjectName] = useState('');
-  const [newSubjectColor, setNewSubjectColor] = useState('#2563EB');
-  const [newSubjectType, setNewSubjectType] = useState('SCHOOL');
-  const [newSubjectClassCode, setNewSubjectClassCode] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      if (slotToEdit) {
-        setSubjectId(slotToEdit.subjectId || (slotToEdit.subject ? slotToEdit.subject.id : (subjects[0]?.id || '')));
-        setSelectedDays([slotToEdit.dayOfWeek || 'THU_2']);
-        setShift(slotToEdit.shift || 'SANG');
-        const rawStart = slotToEdit.startTime || '08:00';
-        const rawEnd = slotToEdit.endTime || '10:30';
-        setStartTime(rawStart.substring(0, 5));
-        setEndTime(rawEnd.substring(0, 5));
-        setRoom(slotToEdit.room || slotToEdit.roomName || '');
-        setTeacherName(slotToEdit.teacherName || slotToEdit.teacher || '');
-        setIsRecurring(slotToEdit.isRecurring !== undefined ? slotToEdit.isRecurring : true);
-        if (slotToEdit.date) {
-          setDate(slotToEdit.date.substring(0, 10));
-        }
-      } else {
-        if (subjects.length > 0) {
-          setSubjectId(subjects[0].id);
-        } else {
-          setSubjectId('NEW_SUBJECT');
-        }
-        setSelectedDays([defaultDay || 'THU_2']);
-        setShift('SANG');
-        setStartTime('08:00');
-        setEndTime('10:30');
-        setRoom('');
-        setTeacherName('');
-        setIsRecurring(true);
-        setDate(new Date().toISOString().substring(0, 10));
-      }
-      setError('');
-    }
-  }, [isOpen, slotToEdit, subjects, defaultDay]);
-
-  // Reset Period khi đổi Ca học
-  useEffect(() => {
-    setSelectedPeriod('CUSTOM');
-  }, [shift]);
-
-
-
-  if (!isOpen) return null;
-
-  const handlePeriodChange = (val) => {
-    setSelectedPeriod(val);
-    if (val !== 'CUSTOM') {
-      const [start, end] = val.split('-');
-      setStartTime(start);
-      setEndTime(end);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!subjectId) return;
-    setLoading(true);
-    setError('');
-
-    try {
-      // 1. Kiểm tra xung đột thời gian trước khi lưu
-      const daysToCreate = isRecurring ? selectedDays : [null];
-      if (startTime && endTime && isRecurring) {
-        for (const day of daysToCreate) {
-          const conflictRes = await checkScheduleConflictApi({
-            id: slotToEdit ? slotToEdit.id : null,
-            dayOfWeek: day,
-            date: null,
-            startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
-            endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
-            isRecurring
-          });
-          if (conflictRes && conflictRes.success && conflictRes.data.hasConflict) {
-            if (conflictRes.data.conflictType === 'HARD_CONFLICT') {
-              const dayLabel = DAY_LABELS[day] || day;
-              setConflictAlertMsg(`${dayLabel}: ${conflictRes.data.message}`);
-              setLoading(false);
-              return;
-            }
-          }
-        }
-      }
-
-      let finalSubjectId = subjectId;
-
-      // Nếu người dùng chọn tạo môn học mới
-      if (subjectId === 'NEW_SUBJECT') {
-        if (!newSubjectName.trim()) {
-          setError('Tên môn học mới không được để trống.');
-          setLoading(false);
-          return;
-        }
-        const subRes = await createSubjectApi({
-          name: newSubjectName,
-          color: newSubjectColor,
-          type: newSubjectType,
-          classCode: newSubjectClassCode
-        });
-
-        if (subRes && subRes.success && subRes.data) {
-          finalSubjectId = subRes.data.id;
-          setNewSubjectName('');
-          setNewSubjectClassCode('');
-        } else {
-          setError(subRes?.message || 'Tạo môn học mới thất bại.');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Tạo / cập nhật lịch cho từng ngày đã chọn
-      const errors = [];
-      if (slotToEdit) {
-        // Khi chỉnh sửa, chỉ cập nhật 1 slot
-        const payload = {
-          subjectId: Number(finalSubjectId),
-          dayOfWeek: isRecurring ? selectedDays[0] : null,
-          date: !isRecurring ? date : null,
-          shift,
-          startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
-          endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
-          room,
-          teacherName,
-          isRecurring
-        };
-        const res = await updateScheduleSlotApi(slotToEdit.id, payload);
-        if (!res || !res.success) {
-          errors.push(res?.message || 'Cập nhật lịch học thất bại.');
-        }
-      } else {
-        // Khi tạo mới, tạo lịch cho tất cả ngày đã chọn
-        for (const day of daysToCreate) {
-          const payload = {
-            subjectId: Number(finalSubjectId),
-            dayOfWeek: isRecurring ? day : null,
-            date: !isRecurring ? date : null,
-            shift,
-            startTime: startTime.length === 5 ? `${startTime}:00` : startTime,
-            endTime: endTime.length === 5 ? `${endTime}:00` : endTime,
-            room,
-            teacherName,
-            isRecurring
-          };
-          const res = await createScheduleSlotApi(payload);
-          if (!res || !res.success) {
-            errors.push(res?.message || `Tạo lịch ${DAY_LABELS[day] || ''} thất bại.`);
-          }
-        }
-      }
-
-      if (errors.length === 0) {
-        onAddSlot();
-        onClose();
-      } else {
-        setError(errors.join(' | '));
-      }
-    } catch (err) {
-      setError('Không thể kết nối đến máy chủ.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200/80 dark:border-slate-800">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-          <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            <span>{slotToEdit ? 'Chỉnh sửa lịch học' : 'Thêm lịch học mới'}</span>
-          </h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 flex items-center justify-center text-slate-500">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Kiểu lặp lại Toggle */}
-          <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-2xl">
-            <button
-              type="button"
-              onClick={() => setIsRecurring(true)}
-              className={`py-2 px-3 text-xs font-bold rounded-xl transition-all ${
-                isRecurring
-                  ? 'bg-white dark:bg-[#172136] text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
-              }`}
-            >
-              Học định kỳ hàng tuần
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsRecurring(false)}
-              className={`py-2 px-3 text-xs font-bold rounded-xl transition-all ${
-                !isRecurring
-                  ? 'bg-white dark:bg-[#172136] text-blue-600 dark:text-blue-400 shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
-              }`}
-            >
-              Học một lần (Bù/Thi)
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Môn học *</label>
-            <select
-              value={subjectId}
-              onChange={(e) => setSubjectId(e.target.value)}
-              required
-              className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-            >
-              {subjects.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-              <option value="NEW_SUBJECT">+ Thêm môn học mới...</option>
-            </select>
-          </div>
-
-          {/* Form tạo nhanh Môn học mới nếu được chọn */}
-          {subjectId === 'NEW_SUBJECT' && (
-            <div className="p-4 bg-slate-50 dark:bg-[#172136] rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-              <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                <BookOpen className="w-4 h-4" />
-                <span>Thông tin môn học mới</span>
-              </h4>
-              
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Tên môn học *</label>
-                <input
-                  type="text"
-                  required={subjectId === 'NEW_SUBJECT'}
-                  value={newSubjectName}
-                  onChange={(e) => setNewSubjectName(e.target.value)}
-                  placeholder="VD: Cấu trúc dữ liệu & Giải thuật"
-                  className="w-full bg-white dark:bg-[#111C32] border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Loại môn học</label>
-                  <select
-                    value={newSubjectType}
-                    onChange={(e) => setNewSubjectType(e.target.value)}
-                    className="w-full bg-white dark:bg-[#111C32] border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-                  >
-                    <option value="SCHOOL">Trường học</option>
-                    <option value="SELF_STUDY">Tự học</option>
-                    <option value="LANGUAGE">Ngoại ngữ</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Mã lớp / Môn</label>
-                  <input
-                    type="text"
-                    value={newSubjectClassCode}
-                    onChange={(e) => setNewSubjectClassCode(e.target.value)}
-                    placeholder="VD: INT1332"
-                    className="w-full bg-white dark:bg-[#111C32] border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Màu đại diện</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={newSubjectColor}
-                    onChange={(e) => setNewSubjectColor(e.target.value)}
-                    className="w-10 h-8 bg-white dark:bg-[#111C32] border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 cursor-pointer"
-                  />
-                  <span className="text-[10px] font-mono text-slate-400">{newSubjectColor}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Thay đổi giữa Thứ tự hàng tuần / Chọn Ngày cụ thể */}
-          {isRecurring ? (
-            <div className="relative">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Thứ trong tuần {!slotToEdit && <span className="font-normal text-slate-400">(có thể chọn nhiều)</span>}
-              </label>
-              {slotToEdit ? (
-                /* Khi chỉnh sửa: chỉ cho chọn 1 ngày */
-                <select
-                  value={selectedDays[0]}
-                  onChange={(e) => setSelectedDays([e.target.value])}
-                  className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-                >
-                  {ALL_DAYS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-                </select>
-              ) : (
-                /* Khi tạo mới: cho chọn nhiều ngày */
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsDaysDropdownOpen(!isDaysDropdownOpen)}
-                    className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white text-left flex items-center justify-between"
-                  >
-                    <span className={selectedDays.length === 0 ? 'text-slate-400' : ''}>
-                      {selectedDays.length === 0 ? 'Chọn thứ...' : selectedDays.map(d => DAY_LABELS[d]).join(', ')}
-                    </span>
-                    <svg className={`w-4 h-4 text-slate-400 transition-transform ${isDaysDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </button>
-                  {isDaysDropdownOpen && (
-                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                      {ALL_DAYS.map(d => {
-                        const checked = selectedDays.includes(d.value);
-                        return (
-                          <label
-                            key={d.value}
-                            className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors ${
-                              checked ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setSelectedDays(prev =>
-                                  checked ? prev.filter(v => v !== d.value) : [...prev, d.value]
-                                );
-                              }}
-                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className={`text-sm ${checked ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>{d.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Ngày học *</label>
-              <input
-                type="date"
-                required={!isRecurring}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-          )}
-
-          {/* Ca học và Chọn Tiết học chuẩn */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Ca học</label>
-              <select
-                value={shift}
-                onChange={(e) => setShift(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              >
-                <option value="SANG">Sáng</option>
-                <option value="CHIEU">Chiều</option>
-                <option value="TOI">Tối</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tiết học chuẩn</label>
-              <select
-                value={selectedPeriod}
-                onChange={(e) => handlePeriodChange(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              >
-                {PERIODS_MAP[shift].map(p => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Giờ học thủ công */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Giờ bắt đầu</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => { setStartTime(e.target.value); setSelectedPeriod('CUSTOM'); }}
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Giờ kết thúc</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => { setEndTime(e.target.value); setSelectedPeriod('CUSTOM'); }}
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phòng học</label>
-              <input
-                type="text"
-                value={room}
-                onChange={(e) => setRoom(e.target.value)}
-                placeholder="VD: A2-301"
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Giảng viên</label>
-              <input
-                type="text"
-                value={teacherName}
-                onChange={(e) => setTeacherName(e.target.value)}
-                placeholder="VD: ThS. Nguyễn Văn B"
-                className="w-full bg-slate-50 dark:bg-[#172136] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-sm">Hủy</button>
-            <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md disabled:opacity-60">
-              {slotToEdit ? (loading ? 'Đang lưu...' : 'Lưu thay đổi') : (loading ? 'Đang tạo...' : 'Tạo lịch học')}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Custom Alert Modal */}
-      <ConflictAlertModal 
-        isOpen={!!conflictAlertMsg} 
-        message={conflictAlertMsg} 
-        onClose={() => setConflictAlertMsg(null)} 
-      />
-    </div>
-  );
-}
-
-function ConflictAlertModal({ isOpen, onClose, message }) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-sm w-full p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-            <AlertCircle className="w-8 h-8" />
-          </div>
-          <h3 className="font-['Be_Vietnam_Pro'] font-bold text-xl text-slate-900 dark:text-white">
-            Trùng lịch học
-          </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-['Inter']">
-            {message}
-          </p>
-        </div>
-        <div className="flex justify-center pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-8 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md shadow-amber-500/20 transition-all w-full"
-          >
-            Đã hiểu
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── 7. CONFIRM DELETE MODAL ───────────────────────────────────────────────────
 export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, title = "Xác nhận xóa", message = "Bạn có chắc chắn muốn xóa không?", loading = false }) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
+      <div className="bg-white dark:bg-[#111C32] rounded-3xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 space-y-6 shadow-2xl border border-slate-200/80 dark:border-slate-800">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">

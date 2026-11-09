@@ -13,6 +13,9 @@ import java.util.List;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
+    java.util.Optional<Task> findByPublicIdAndUserId(java.util.UUID publicId, Long userId);
+
+
     @Query("SELECT t FROM Task t WHERE t.subject.id = :subjectId AND t.deleted = false")
     List<Task> findBySubjectId(@Param("subjectId") Long subjectId);
 
@@ -45,6 +48,15 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
+
+    @Query("""
+            SELECT t FROM Task t LEFT JOIN FETCH t.subject
+            WHERE t.user.id = :userId AND t.deleted = false AND t.status <> 'DONE'
+              AND t.dueAt >= :from AND t.dueAt < :to
+            ORDER BY t.dueAt, t.id
+            """)
+    List<Task> findPendingWithDeadline(@Param("userId") Long userId,
+            @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("""
             SELECT t.subject.id, t.status, COUNT(t)

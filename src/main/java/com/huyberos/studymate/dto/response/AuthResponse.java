@@ -18,6 +18,7 @@ public class AuthResponse {
     // User info trả về khi login/register
     private Long userId;
     private String email;
+    private String username;
     private String fullName;
     private String avatarUrl;
 }

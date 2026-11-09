@@ -1,0 +1,534 @@
+{
+  "metricsVersion": "study-metrics-v1",
+  "cases": [
+    {
+      "id": "empty-no-goals",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [],
+      "expected": {
+        "streak": 0,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "pending-tasks-are-not-study",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [
+        {
+          "id": "t1",
+          "status": "TODO",
+          "deleted": false
+        }
+      ],
+      "completions": [],
+      "sessions": [],
+      "expected": {
+        "streak": 0,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 1,
+        "completedTasks": 0,
+        "progressPercent": 0
+      }
+    },
+    {
+      "id": "verified-task-completion",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [
+        {
+          "id": "t1",
+          "status": "DONE",
+          "deleted": false
+        }
+      ],
+      "completions": [
+        {
+          "id": "c1",
+          "taskId": "t1",
+          "at": "2026-11-04T02:00:00Z",
+          "revoked": false
+        }
+      ],
+      "sessions": [],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 1,
+        "completedTasks": 1,
+        "progressPercent": 100
+      }
+    },
+    {
+      "id": "yesterday-grace-and-unique-days",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [
+        {
+          "id": "c1",
+          "taskId": "t1",
+          "at": "2026-11-03T02:00:00Z",
+          "revoked": false
+        },
+        {
+          "id": "c2",
+          "taskId": "t1",
+          "at": "2026-11-03T03:00:00Z",
+          "revoked": false
+        },
+        {
+          "id": "c3",
+          "taskId": "t1",
+          "at": "2026-11-02T02:00:00Z",
+          "revoked": false
+        }
+      ],
+      "sessions": [],
+      "expected": {
+        "streak": 2,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "gap-breaks-streak",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [
+        {
+          "id": "c1",
+          "taskId": "t1",
+          "at": "2026-11-01T02:00:00Z",
+          "revoked": false
+        }
+      ],
+      "sessions": [],
+      "expected": {
+        "streak": 0,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "below-focus-threshold",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:09:59Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 0,
+        "totalFocusSeconds": 599,
+        "weekFocusSeconds": 599,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "exact-focus-threshold",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:10:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 600,
+        "weekFocusSeconds": 600,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "two-short-sessions-combine",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:05:00Z"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T03:00:00Z",
+              "end": "2026-11-04T03:05:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 600,
+        "weekFocusSeconds": 600,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "pause-is-not-study",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "STOPPED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:05:00Z"
+            },
+            {
+              "start": "2026-11-04T02:20:00Z",
+              "end": "2026-11-04T02:25:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 600,
+        "weekFocusSeconds": 600,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "same-session-retry-is-idempotent",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:25:00Z"
+            }
+          ]
+        },
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:25:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 1500,
+        "weekFocusSeconds": 1500,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "overlapping-devices-not-double-counted",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:10:00Z"
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-04T02:05:00Z",
+              "end": "2026-11-04T02:15:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 900,
+        "weekFocusSeconds": 900,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "midnight-splits-real-seconds",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-03T16:55:00Z",
+              "end": "2026-11-03T17:15:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 1200,
+        "weekFocusSeconds": 1200,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null,
+        "days": [
+          {
+            "date": "2026-11-03",
+            "focusSeconds": 300,
+            "completedTasks": 0,
+            "qualifies": false
+          },
+          {
+            "date": "2026-11-04",
+            "focusSeconds": 900,
+            "completedTasks": 0,
+            "qualifies": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "week-boundary-is-local-monday",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-03T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-01T16:55:00Z",
+              "end": "2026-11-01T17:15:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 1200,
+        "weekFocusSeconds": 900,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "future-activity-not-confirmed",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [
+        {
+          "id": "c1",
+          "taskId": "t1",
+          "at": "2026-11-05T02:00:00Z",
+          "revoked": false
+        }
+      ],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-05T02:00:00Z",
+              "end": "2026-11-05T02:25:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 0,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "running-session-not-finalized",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "RUNNING",
+          "segments": [
+            {
+              "start": "2026-11-04T02:00:00Z",
+              "end": "2026-11-04T02:25:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 0,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "deleting-task-preserves-completion-history",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [
+        {
+          "id": "t1",
+          "status": "DONE",
+          "deleted": true
+        }
+      ],
+      "completions": [
+        {
+          "id": "c1",
+          "taskId": "t1",
+          "at": "2026-11-04T02:00:00Z",
+          "revoked": false
+        }
+      ],
+      "sessions": [],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "revoked-completion-does-not-count",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "asOf": "2026-11-04T05:00:00Z",
+      "tasks": [],
+      "completions": [
+        {
+          "id": "c1",
+          "taskId": "t1",
+          "at": "2026-11-04T02:00:00Z",
+          "revoked": true
+        }
+      ],
+      "sessions": [],
+      "expected": {
+        "streak": 0,
+        "totalFocusSeconds": 0,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    },
+    {
+      "id": "dst-day-can-contain-25-real-hours",
+      "timezone": "America/New_York",
+      "asOf": "2026-11-02T17:00:00Z",
+      "tasks": [],
+      "completions": [],
+      "sessions": [
+        {
+          "id": "s1",
+          "status": "COMPLETED",
+          "segments": [
+            {
+              "start": "2026-11-01T04:00:00Z",
+              "end": "2026-11-02T05:00:00Z"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "streak": 1,
+        "totalFocusSeconds": 90000,
+        "weekFocusSeconds": 0,
+        "totalTasks": 0,
+        "completedTasks": 0,
+        "progressPercent": null
+      }
+    }
+  ]
+}

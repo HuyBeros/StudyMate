@@ -1,21 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ProfileView from './components/ProfileView';
+import SettingsView from './components/SettingsView';
+import useStudyData from './hooks/useStudyData';
+import { displayMetrics, zonedDate } from './lib/studyClient';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardView from './components/DashboardView';
+import StudyRoomsView from './components/StudyRoomsView';
+import DailyAssistant from './components/DailyAssistant';
 import SubjectsView from './components/SubjectsView';
 import ScheduleView from './components/ScheduleView';
+import CreateScheduleModal from './components/CreateScheduleModal';
 import StatisticsView from './components/StatisticsView';
 import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
-import ImportScheduleModal from './components/ImportScheduleModal';
 import SubjectDetailView from './components/SubjectDetailView';
-import AiGenerateModal from './components/ai/AiGenerateModal';
-import AiLoadingState from './components/ai/AiLoadingState';
-import AiPreviewPanel from './components/ai/AiPreviewPanel';
 import { 
   CreateSubjectModal,
   CreateTaskModal,
-  CreateScheduleModal,
   ConfirmDeleteModal
 } from './components/Modals';
 import { 
@@ -33,10 +35,36 @@ import {
 } from './services/api';
 import * as api from './services/api';
 
+const defaultTimerMinutes = { focus: 25, short: 5, long: 15 };
+
+function loadTimerMinutes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('studymate:timer-minutes'));
+    return Object.fromEntries(Object.entries(defaultTimerMinutes).map(([key, fallback]) => {
+      const value = saved?.[key];
+      return [key, Number.isInteger(value) && value >= 1 && value <= (key === 'focus' ? 240 : 60) ? value : fallback];
+    }));
+  } catch { return defaultTimerMinutes; }
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [darkMode, setDarkMode] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(location.search).has('room') ? 'study-rooms' : 'dashboard');
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('studymate:theme') === 'dark'; } catch { return false; }
+  });
+  const [timerMinutes, setTimerMinutes] = useState(loadTimerMinutes);
   const [user, setUser] = useState(() => getStoredUser() || null);
+  const [assistantOwner, setAssistantOwner] = useState(null);
+  const [scheduleDate, setScheduleDate] = useState(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    const url = new URL(location.href);
+    if (activeTab !== 'study-rooms' && url.searchParams.has('room')) {
+      url.searchParams.delete('room');
+      history.replaceState(history.state, '', url);
+    }
+  }, [activeTab]);
 
   // Toggle dark mode class on <html> element
   useEffect(() => {
@@ -45,7 +73,11 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    try { localStorage.setItem('studymate:theme', darkMode ? 'dark' : 'light'); } catch { /* Browser storage is optional. */ }
   }, [darkMode]);
+  useEffect(() => {
+    try { localStorage.setItem('studymate:timer-minutes', JSON.stringify(timerMinutes)); } catch { /* Browser storage is optional. */ }
+  }, [timerMinutes]);
 
   // Real API state
   const [subjects, setSubjects] = useState([]);
@@ -54,24 +86,63 @@ export default function App() {
   const [todayData, setTodayData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [weeklyStats, setWeeklyStats] = useState(null);
+  const study = useStudyData(user);
+  const refreshStudy = study.refresh;
+  const preferences = study.data ? { ...study.data.preferences, weeklyGoal: study.data.preferences.weeklyGoalSeconds / 3600 } : null;
+  const [notice, setNotice] = useState('');
+  const [dataError, setDataError] = useState('');
+  const metrics = study.data ? displayMetrics(study.data.metrics) : null;
+  const loadSequence = useRef(0);
+
+  useEffect(() => {
+    const check = () => {
+      const now = new Date();
+      if (!user || !preferences?.reminderEnabled) return;
+      const today = zonedDate(now, preferences.timezone);
+      const time = new Intl.DateTimeFormat('en-GB', { timeZone: preferences.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
+      const key = `studymate:reminder-seen:${user.id}`;
+      let seen; try { seen = localStorage.getItem(key); } catch { return; }
+      if (seen !== today && time >= preferences.reminderTime) {
+        setNotice('Đến giờ học. Chọn một nhiệm vụ để bắt đầu.');
+        try { localStorage.setItem(key, today); } catch { /* Only an in-app reminder receipt. */ }
+      }
+    };
+    check();
+    const timer = setInterval(check, 30000);
+    return () => clearInterval(timer);
+  }, [user, preferences?.reminderEnabled, preferences?.reminderTime, preferences?.timezone]);
+
+  useEffect(() => {
+    const clear = () => {
+      setUser(null); setTasks([]); setSubjects([]); setSchedule([]); setTodayData(null); setWeeklyStats(null);
+      setAssistantOwner(null); setScheduleDate(null);
+      loadSequence.current++; setLoading(false); setNotice(''); setIsAuthModalOpen(true);
+    };
+    window.addEventListener('auth:unauthorized', clear);
+    return () => window.removeEventListener('auth:unauthorized', clear);
+  }, []);
 
   // Modals state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLinkingGoogle, setIsLinkingGoogle] = useState(false);
+  const openAuth = () => { setIsLinkingGoogle(false); setIsAuthModalOpen(true); };
+  const openAssistant = () => user ? setAssistantOwner(user.id) : openAuth();
+  const navigateFromAssistant = (target, date) => {
+    setAssistantOwner(null);
+    if (target === 'schedule') {
+      setScheduleDate(date || null);
+      setActiveTab('schedule');
+    } else if (target === 'tasks') {
+      setActiveTab('dashboard');
+      requestAnimationFrame(() => document.getElementById('dashboard-tasks')?.scrollIntoView({ block: 'start' }));
+    }
+  };
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isAiGenerateModalOpen, setIsAiGenerateModalOpen] = useState(false);
-  const [aiGenerateType, setAiGenerateType] = useState(null);
   
-  const [isAiLoadingOpen, setIsAiLoadingOpen] = useState(false);
-  const [isAiPreviewOpen, setIsAiPreviewOpen] = useState(false);
-  const [aiPreviewData, setAiPreviewData] = useState(null);
   const [isCreateSubjectOpen, setIsCreateSubjectOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCreateScheduleOpen, setIsCreateScheduleOpen] = useState(false);
-  const [isImportScheduleOpen, setIsImportScheduleOpen] = useState(false);
   const [activeSubjectId, setActiveSubjectId] = useState(null);
-  const [activeNoteOrDoc, setActiveNoteOrDoc] = useState(null);
-  const [activeNoteId, setActiveNoteId] = useState(null);
-  const [activeDocId, setActiveDocId] = useState(null);
 
   // Edit & Delete state
   const [subjectToEdit, setSubjectToEdit] = useState(null);
@@ -82,15 +153,23 @@ export default function App() {
 
   // 1. Fetch Real Backend Data
   const loadData = useCallback(async () => {
+    const sequence = ++loadSequence.current;
+    const token = getAuthToken();
+    if (!token) return;
     setLoading(true);
+    setDataError('');
     try {
       const [todayRes, subjectsRes, tasksRes, scheduleRes, statsRes] = await Promise.all([
         getTodayDashboardApi(),
         getSubjectsApi(),
         getTasksApi(),
         getScheduleApi(),
-        getWeeklyStatsApi()
+        getWeeklyStatsApi(),
+        refreshStudy()
       ]);
+
+      if (sequence !== loadSequence.current || token !== getAuthToken()) return;
+      if ([todayRes, subjectsRes, tasksRes, scheduleRes, statsRes].some(res => !res?.success)) setDataError('Không tải được một phần dữ liệu. Hãy thử tải lại.');
 
       if (todayRes && todayRes.success) {
         setTodayData(todayRes.data);
@@ -112,12 +191,12 @@ export default function App() {
         setWeeklyStats(statsRes.data);
       }
 
-    } catch (e) {
-      console.warn("[App] Error loading data from API:", e);
+    } catch {
+      setDataError("Không tải được dữ liệu. Hãy kiểm tra kết nối và thử lại.");
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current) setLoading(false);
     }
-  }, []);
+  }, [refreshStudy]);
 
   useEffect(() => {
     if (getAuthToken()) {
@@ -157,11 +236,13 @@ export default function App() {
   };
 
   const [scheduleDefaultDay, setScheduleDefaultDay] = useState(null);
+  const [scheduleDefaultDate, setScheduleDefaultDate] = useState(null);
 
   // Handlers for Schedule Edit & Delete
-  const handleOpenNewSchedule = (defaultDay = null) => {
+  const handleOpenNewSchedule = (defaultDay = null, defaultDate = null) => {
     setScheduleSlotToEdit(null);
     setScheduleDefaultDay(defaultDay);
+    setScheduleDefaultDate(defaultDate);
     setIsCreateScheduleOpen(true);
   };
 
@@ -193,14 +274,11 @@ export default function App() {
   // Handle Auth success
   const handleAuthSuccess = (userData) => {
     const newUserObj = {
-      fullName: userData.fullName || userData.email,
+      id: userData.userId,
+      fullName: userData.fullName || userData.username || userData.email,
       email: userData.email,
-      role: "Học viên",
-      avatar: userData.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-      streak: 1,
-      dailyGoalPercent: 0,
-      hoursStudied: 0,
-      goalHours: 6.0,
+      username: userData.username,
+      avatar: userData.avatarUrl || "",
     };
     setUser(newUserObj);
     setStoredUser(newUserObj);
@@ -208,8 +286,11 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    loadSequence.current++;
     await logoutApi();
     setUser(null);
+    setAssistantOwner(null); setScheduleDate(null);
+    setTasks([]); setSubjects([]); setSchedule([]); setTodayData(null); setWeeklyStats(null); setLoading(false); setNotice('');
     setIsAuthModalOpen(true);
   };
 
@@ -218,23 +299,42 @@ export default function App() {
     setStoredUser(updatedUser);
   };
 
+  const mutateTask = async (operation, successMessage = '') => {
+    if (!user) { setIsAuthModalOpen(true); return false; }
+    try {
+      const res = await operation();
+      if (!res?.success) throw new Error(res?.message || 'Không thể lưu nhiệm vụ.');
+      if (successMessage) setNotice(typeof successMessage === 'function' ? successMessage(res) : successMessage);
+      await loadData();
+      return true;
+    } catch (error) { setDataError(error.message); return false; }
+  };
+
+  const handleTaskUpdate = (id, updates) => {
+    const task = tasks.find(item => item.id === id);
+    if (!task) return;
+    return mutateTask(() => updates.status
+      ? api.updateTaskStatusApi(id, updates.status)
+      : api.request(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ subjectId: task.subjectId, title: task.title, description: task.description, dueAt: task.dueAt, status: task.status, priority: task.priority, ...updates }) }),
+      updates.status === 'DONE' ? 'Đã hoàn thành nhiệm vụ. Thêm một bước tiến hôm nay.' : '');
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-['Inter',sans-serif] transition-colors">
       {/* Sidebar */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        onOpenNewSession={handleOpenNewSubject}
       />
 
       {/* Main Body */}
-      <div className="pl-64 flex-1 flex flex-col min-w-0">
+      <div className="app-body md:pl-64 flex-1 flex flex-col min-w-0">
         
         {/* Header */}
         <Header 
           user={user} 
-          onOpenAuth={() => setIsAuthModalOpen(true)}
-          onOpenProfile={() => setIsProfileModalOpen(true)}
+          onOpenAuth={openAuth}
+          onOpenProfile={() => setActiveTab('profile')}
           onLogout={handleLogout}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
@@ -242,46 +342,35 @@ export default function App() {
           tasks={tasks}
           schedule={schedule}
           todayData={todayData}
-          onNavigate={(tab) => setActiveTab(tab)}
+          onNavigate={tab => tab === 'tasks' ? navigateFromAssistant('tasks') : setActiveTab(tab)}
         />
 
         {/* Dynamic Views */}
-        <main className="flex-1 pb-16">
-          {activeTab === 'dashboard' && (
-            <DashboardView 
-              data={{
-                user: user,
-                subjects: subjects,
-                todayData: todayData,
-                schedule: schedule,
-                tasks: tasks.map(t => ({
-                  id: t.id,
-                  title: t.title,
-                  subject: t.subjectName || "Chung",
-                  subjectColor: t.subjectColor || "#2563EB",
-                  completed: t.status === "DONE",
-                  status: t.status,
-                  deadline: t.deadline,
-                  priority: t.priority === "HIGH" ? "ƯU TIÊN CAO" : t.priority === "MEDIUM" ? "TRUNG BÌNH" : "BÌNH THƯỜNG",
-                  priorityClass: t.priority === "HIGH" 
-                    ? "bg-red-50 text-red-600" 
-                    : t.priority === "MEDIUM" 
-                    ? "bg-amber-50 text-amber-600" 
-                    : "bg-blue-50 text-blue-600"
-                }))
-              }}
-              onNavigate={(tab) => setActiveTab(tab)}
-              onOpenNewSubject={() => setIsCreateTaskOpen(true)}
-              onSubjectClick={(id) => {
-                setActiveSubjectId(id);
-                setActiveTab('subject-detail');
-              }}
+        <main id="main-content" className="flex-1 pb-24 md:pb-8" aria-busy={loading}>
+          {loading && <p role="status" className="mx-4 mt-4 text-sm text-slate-600 dark:text-slate-300">Đang cập nhật dữ liệu…</p>}
+          {dataError && <div role="alert" className="mx-4 mt-4 p-4 rounded-xl bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200 flex flex-wrap gap-3 items-center">{dataError}<button className="font-bold underline" onClick={loadData}>Tải lại</button></div>}
+          {study.error && <div role="alert" className="mx-4 mt-4 p-4 rounded-xl bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100 flex flex-wrap gap-3 items-center">{study.error}<button disabled={study.busy} className="font-bold underline" onClick={study.refresh}>Tải lại số liệu</button></div>}
+          {study.pending && <div role="status" className="mx-4 mt-4 p-4 rounded-xl bg-blue-50 text-blue-900 flex flex-wrap gap-3 items-center">Một thao tác phiên học đang chờ xác nhận. Số liệu hiển thị là lần xác nhận gần nhất.<button disabled={study.busy} className="font-bold underline" onClick={study.retry}>Thử gửi lại</button></div>}
+          {user && !study.data && <p role="status" className="mx-4 mt-4 text-sm text-slate-600 dark:text-slate-300">{study.error ? 'Chưa có số liệu được xác nhận. Hãy tải lại khi có kết nối.' : 'Đang tải số liệu học tập từ tài khoản…'}</p>}
+          {notice && <div role="status" className="success-notice mx-4 mt-2 px-3 py-2 text-sm rounded-xl bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100 flex justify-between gap-4"><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Đóng thông báo" className="font-bold px-2">×</button></div>}
+          {study.data && <div hidden={activeTab !== 'dashboard'}>
+            <DashboardView key={user?.id ?? 'guest'}
+              data={{ user, subjects, tasks, todayData, schedule }}
+              metrics={metrics} preferences={preferences} study={study} onLogin={openAuth}
+              timerMinutes={timerMinutes}
+              onNavigate={setActiveTab}
+              onOpenAssistant={openAssistant}
+              onOpenNewSubject={() => user ? setIsCreateTaskOpen(true) : setIsAuthModalOpen(true)}
+              onTaskAdd={task => mutateTask(() => api.createTaskApi(task))}
+              onTaskUpdate={handleTaskUpdate}
+              onTaskDelete={id => mutateTask(() => api.deleteTaskApi(id))}
+              onSessionComplete={session => setNotice(`Đã lưu ${Math.floor(session.focusSeconds / 60)} phút ${session.focusSeconds % 60} giây tập trung vào tài khoản.`)}
             />
-          )}
+          </div>}
 
           {activeTab === 'subjects' && (
             <SubjectsView 
-              subjects={subjects} 
+              subjects={subjects} tasks={tasks} schedule={schedule}
               onOpenNewSubject={handleOpenNewSubject}
               onEditSubject={handleEditSubject}
               onDeleteSubject={handleDeleteSubject}
@@ -295,35 +384,20 @@ export default function App() {
 
           {activeTab === 'subject-detail' && activeSubjectId != null && (
             <SubjectDetailView
+              key={activeSubjectId}
               subjectId={activeSubjectId}
               subjects={subjects}
               onBack={() => {
                 setActiveTab('subjects');
                 setActiveSubjectId(null);
               }}
-              onOpenQuizModal={(docId) => {
-                setActiveNoteOrDoc('doc');
-                setActiveDocId(docId);
-                setAiGenerateType('quiz');
-                setIsAiGenerateModalOpen(true);
-              }}
-              onOpenMindmapModal={(docId) => {
-                setActiveNoteOrDoc('doc');
-                setActiveDocId(docId);
-                setAiGenerateType('mindmap');
-                setIsAiGenerateModalOpen(true);
-              }}
-              onOpenSummaryModal={(docId) => {
-                setActiveNoteOrDoc('doc');
-                setActiveDocId(docId);
-                setAiGenerateType('summary');
-                setIsAiGenerateModalOpen(true);
-              }}
             />
           )}
 
           {activeTab === 'schedule' && (
             <ScheduleView 
+              key={scheduleDate || 'current'}
+              initialDate={scheduleDate}
               schedule={schedule.map(s => ({
                 id: s.id,
                 subjectId: s.subjectId,
@@ -333,14 +407,19 @@ export default function App() {
                 shift: s.shift,
                 startTime: s.startTime,
                 endTime: s.endTime,
-                time: s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : undefined,
+                time: s.startTime && s.endTime ? `${s.startTime.slice(0, 5)} – ${s.endTime.slice(0, 5)}` : undefined,
                 room: s.room,
                 teacher: s.teacherName,
                 teacherName: s.teacherName,
+                teacherPhone: s.teacherPhone,
+                department: s.department,
                 isRecurring: s.isRecurring,
+                isOnline: s.isOnline,
+                periods: s.periods,
                 iconType: s.iconType,
               }))}
               tasks={tasks.map(t => ({
+                ...t,
                 id: t.id,
                 title: t.title,
                 status: t.status,
@@ -358,136 +437,55 @@ export default function App() {
               onOpenNewSchedule={handleOpenNewSchedule}
               onEditSchedule={handleEditSchedule}
               onDeleteSchedule={handleDeleteSchedule}
-              onOpenImportSchedule={() => setIsImportScheduleOpen(true)}
               onReload={() => loadData()}
             />
           )}
 
 
 
-          {activeTab === 'statistics' && (
+          {activeTab === 'statistics' && study.data && (
             <StatisticsView 
               stats={weeklyStats}
+              metrics={metrics} preferences={preferences} filters={study.filters} onFilterChange={study.setFilters}
               subjects={subjects}
               tasks={tasks}
               schedule={schedule}
             />
           )}
+          {activeTab === 'study-rooms' && <StudyRoomsView key={user?.id ?? 'guest'}
+            user={user} onLogin={openAuth} activeSession={study.data?.activeSession} />}
 
-          {(activeTab === 'profile' || activeTab === 'settings' || activeTab === 'help') && (
-            <div className="p-8 max-w-4xl mx-auto space-y-6">
-              <div className="bg-white dark:bg-[#111C32] rounded-3xl p-8 border border-slate-200/80 dark:border-slate-800/80 shadow-2xs space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <img 
-                      src={user?.avatar || user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"} 
-                      alt={user?.fullName || 'User'} 
-                      className="w-24 h-24 rounded-full object-cover ring-4 ring-blue-500/20"
-                    />
-                    <div>
-                      <h2 className="font-['Be_Vietnam_Pro'] font-bold text-3xl text-slate-900 dark:text-white">{user?.fullName || user?.email || 'Người dùng'}</h2>
-                      <p className="text-blue-600 dark:text-blue-400 font-semibold text-sm">{user?.email || user?.role || 'Học viên'}</p>
-                      <p className="text-slate-400 dark:text-slate-400 text-xs mt-1">Chuỗi học tập: {user?.streak || 0} ngày liên tiếp ⚡</p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setIsProfileModalOpen(true)}
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-md"
-                  >
-                    Chỉnh sửa hồ sơ
-                  </button>
-                </div>
-              </div>
-            </div>
+          {activeTab === 'profile' && study.data && (
+            <ProfileView key={user?.id ?? 'guest'} user={user} metrics={metrics} preferences={preferences}
+              onSavePreferences={study.savePreferences} onEditProfile={() => setIsProfileModalOpen(true)}
+              onLogin={openAuth} onOpenSettings={() => setActiveTab('settings')} />
           )}
+          {activeTab === 'settings' && study.data && (
+            <SettingsView key={user?.id ?? 'guest'} user={user} preferences={preferences}
+              darkMode={darkMode} setDarkMode={setDarkMode} timerMinutes={timerMinutes} setTimerMinutes={setTimerMinutes}
+              onSavePreferences={study.savePreferences} onLogin={openAuth} onLogout={handleLogout}
+              onLinkGoogle={() => { setIsLinkingGoogle(true); setIsAuthModalOpen(true); }}
+              onImportLegacy={study.importLegacy} importNotice={study.importNotice} busy={study.busy}
+              onNavigate={target => target === 'tasks' ? navigateFromAssistant('tasks') : setActiveTab(target)} />
+          )}
+          {activeTab === 'help' && <div className="page-shell"><section className="surface p-6 space-y-4"><h2 className="text-2xl font-bold">Hướng dẫn học tập</h2><p>Thêm môn học, tạo nhiệm vụ rồi dùng đồng hồ Pomodoro để tập trung trong 25 phút.</p><p>Một ngày được tính vào chuỗi khi hoàn thành ít nhất một nhiệm vụ hoặc tập trung từ 10 phút. Thống kê không tính lịch học dự kiến là giờ đã học.</p><button className="primary-button" onClick={() => setActiveTab('dashboard')}>Về bảng điều khiển</button></section></div>}
         </main>
       </div>
 
       {/* Modals */}
+      {user && assistantOwner === user.id && <DailyAssistant key={user.id}
+        onClose={() => setAssistantOwner(null)} onNavigate={navigateFromAssistant} />}
       <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)}
+        isOpen={isAuthModalOpen}
+        linkGoogle={isLinkingGoogle && !!user}
+        onClose={() => { setIsAuthModalOpen(false); setIsLinkingGoogle(false); }}
         onSuccess={handleAuthSuccess}
       />
-      <ProfileModal
-        isOpen={isProfileModalOpen}
+      {isProfileModalOpen && user && <ProfileModal
         onClose={() => setIsProfileModalOpen(false)}
         user={user}
         onUpdateUser={handleUpdateUser}
-      />
-      <AiGenerateModal 
-        isOpen={isAiGenerateModalOpen}
-        onClose={() => setIsAiGenerateModalOpen(false)}
-        type={aiGenerateType}
-        docId={activeDocId}
-        onGenerate={async (type, docId, config) => {
-          setIsAiGenerateModalOpen(false);
-          setIsAiLoadingOpen(true);
-          try {
-            let res;
-            if (activeNoteOrDoc === 'note') {
-              if (type === 'quiz') res = await api.generateQuizFromNoteApi(activeNoteId, config);
-              if (type === 'mindmap') res = await api.generateMindmapFromNoteApi(activeNoteId, config);
-              if (type === 'summary') res = await api.summarizeNoteApi(activeNoteId, config);
-            } else {
-              if (type === 'quiz') res = await api.generateQuizFromDocApi(docId, config);
-              if (type === 'mindmap') res = await api.generateMindmapFromDocApi(docId, config);
-              if (type === 'summary') res = await api.summarizeDocumentApi(docId, config);
-            }
-
-            if (res && res.success) {
-              setAiPreviewData(res.data);
-              setIsAiPreviewOpen(true);
-            } else {
-              alert(res?.message || 'Có lỗi xảy ra khi tạo nội dung AI.');
-            }
-          } catch (e) {
-            alert('Lỗi kết nối AI.');
-          } finally {
-            setIsAiLoadingOpen(false);
-          }
-        }}
-      />
-
-      <AiLoadingState 
-        isVisible={isAiLoadingOpen}
-        type={aiGenerateType}
-      />
-
-      <AiPreviewPanel 
-        isOpen={isAiPreviewOpen}
-        onClose={() => setIsAiPreviewOpen(false)}
-        data={aiPreviewData}
-        type={aiGenerateType}
-        onSave={async (updatedData) => {
-          try {
-            const payload = {
-              sourceType: activeNoteOrDoc === 'note' ? 'NOTE' : 'DOCUMENT',
-              sourceId: activeNoteOrDoc === 'note' ? activeNoteId : activeDocId,
-              title: updatedData.title,
-            };
-            if (aiGenerateType === 'quiz') payload.questions = updatedData.questions;
-            if (aiGenerateType === 'mindmap') payload.structure = updatedData.structure;
-            if (aiGenerateType === 'summary') payload.summary = updatedData.summary;
-
-            const res = await api.saveAiOutputApi(aiGenerateType, payload);
-            if (res?.success) {
-              alert('Lưu thành công!');
-              setIsAiPreviewOpen(false);
-              // Force reload subjects or subject details if needed
-            } else {
-              alert('Lưu thất bại.');
-            }
-          } catch(e) {
-            alert('Lỗi khi lưu.');
-          }
-        }}
-        onRegenerate={() => {
-          setIsAiPreviewOpen(false);
-          setIsAiGenerateModalOpen(true);
-        }}
-      />
+      />}
       <CreateSubjectModal 
         isOpen={isCreateSubjectOpen} 
         onClose={() => {
@@ -503,24 +501,19 @@ export default function App() {
         subjects={subjects}
         onAddTask={() => loadData()}
       />
-      <CreateScheduleModal 
-        isOpen={isCreateScheduleOpen} 
+      {isCreateScheduleOpen && <CreateScheduleModal
         onClose={() => {
           setIsCreateScheduleOpen(false);
           setScheduleSlotToEdit(null);
           setScheduleDefaultDay(null);
+          setScheduleDefaultDate(null);
         }} 
         subjects={subjects}
         slotToEdit={scheduleSlotToEdit}
         defaultDay={scheduleDefaultDay}
+        defaultDate={scheduleDefaultDate}
         onAddSlot={() => loadData()}
-      />
-      <ImportScheduleModal
-        isOpen={isImportScheduleOpen}
-        onClose={() => setIsImportScheduleOpen(false)}
-        subjects={subjects}
-        onImportSuccess={() => loadData()}
-      />
+      />}
       <ConfirmDeleteModal
         isOpen={!!subjectToDelete}
         onClose={() => setSubjectToDelete(null)}

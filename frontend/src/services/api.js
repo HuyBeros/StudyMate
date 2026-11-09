@@ -1,6 +1,6 @@
 // API Service kết nối 100% với Spring Boot REST API Backend
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // Token Storage
 export const getAuthToken = () => localStorage.getItem('accessToken');
@@ -41,24 +41,28 @@ export async function request(endpoint, options = {}) {
       headers,
     });
 
-    if (response.status === 401) {
+    if (response.status === 401 && token === getAuthToken() && !['/auth/login', '/auth/oauth2', '/auth/google/link'].includes(endpoint)) {
       clearAuthTokens();
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
 
     const data = await response.json();
-    return data;
+    return { ...data, httpStatus: response.status };
   } catch (error) {
     console.error(`[API Error] Failed to fetch ${endpoint}:`, error);
-    return { success: false, message: error.message || 'Lỗi kết nối máy chủ' };
+    return { success: false, httpStatus: 0, message: error.message || 'Lỗi kết nối máy chủ' };
   }
 }
 
 // ── 1. AUTH API ──────────────────────────────────────────
-export async function loginApi(email, password) {
+export function askDailyAssistantApi(question) {
+  return request('/assistant/ask', { method: 'POST', body: JSON.stringify({ question }) });
+}
+
+export async function loginApi(identifier, password) {
   const res = await request('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(identifier.includes('@') ? { email: identifier, password } : { username: identifier, password }),
   });
   if (res.success && res.data) {
     setAuthToken(res.data.accessToken);
@@ -66,6 +70,7 @@ export async function loginApi(email, password) {
     setStoredUser({
       id: res.data.userId,
       email: res.data.email,
+      username: res.data.username,
       fullName: res.data.fullName,
       avatarUrl: res.data.avatarUrl,
     });
@@ -73,10 +78,10 @@ export async function loginApi(email, password) {
   return res;
 }
 
-export async function registerApi(email, password, fullName) {
+export async function registerApi(username, password) {
   const res = await request('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password, fullName }),
+    body: JSON.stringify({ username, password }),
   });
   if (res.success && res.data) {
     setAuthToken(res.data.accessToken);
@@ -84,6 +89,7 @@ export async function registerApi(email, password, fullName) {
     setStoredUser({
       id: res.data.userId,
       email: res.data.email,
+      username: res.data.username,
       fullName: res.data.fullName,
       avatarUrl: res.data.avatarUrl,
     });
@@ -91,10 +97,10 @@ export async function registerApi(email, password, fullName) {
   return res;
 }
 
-export async function oauth2LoginApi(provider, email, fullName, avatarUrl) {
+export async function oauth2LoginApi(token) {
   const res = await request('/auth/oauth2', {
     method: 'POST',
-    body: JSON.stringify({ provider, email, fullName, avatarUrl }),
+    body: JSON.stringify({ provider: 'GOOGLE', token }),
   });
   if (res.success && res.data) {
     setAuthToken(res.data.accessToken);
@@ -102,6 +108,7 @@ export async function oauth2LoginApi(provider, email, fullName, avatarUrl) {
     setStoredUser({
       id: res.data.userId,
       email: res.data.email,
+      username: res.data.username,
       fullName: res.data.fullName,
       avatarUrl: res.data.avatarUrl,
     });
@@ -109,20 +116,51 @@ export async function oauth2LoginApi(provider, email, fullName, avatarUrl) {
   return res;
 }
 
-export async function updateProfileApi(fullName, avatarUrl, newPassword) {
-  const res = await request('/auth/profile', {
-    method: 'PUT',
-    body: JSON.stringify({ fullName, avatarUrl, newPassword }),
+export async function getGoogleConfigApi() {
+  return request('/auth/google/config');
+}
+
+export async function linkGoogleApi(token) {
+  const res = await request('/auth/google/link', {
+    method: 'POST', body: JSON.stringify({ provider: 'GOOGLE', token }),
   });
   if (res.success && res.data) {
-    setStoredUser({
-      id: res.data.userId,
-      email: res.data.email,
-      fullName: res.data.fullName,
-      avatarUrl: res.data.avatarUrl,
-    });
+    setAuthToken(res.data.accessToken);
+    setRefreshToken(res.data.refreshToken);
   }
   return res;
+}
+
+export function updateProfileApi(fullName, avatarFile) {
+  if (avatarFile) {
+    const body = new FormData();
+    body.append('file', avatarFile);
+    body.append('fullName', fullName);
+    return request('/auth/profile/avatar', { method: 'PUT', body });
+  }
+  return request('/auth/profile', { method: 'PUT', body: JSON.stringify({ fullName }) });
+}
+
+export function uploadUrl(path) {
+  return path?.startsWith('/uploads/') ? BASE_URL.replace(/\/api\/?$/, '') + path : path;
+}
+
+export function avatarSrc(path) {
+  return path?.startsWith('/uploads/avatars/') ? uploadUrl(path) : path;
+}
+
+export function getPasswordStatusApi() {
+  return request('/auth/password');
+}
+
+export async function changePasswordApi(currentPassword, newPassword) {
+  const token = getAuthToken();
+  const result = await request('/auth/password', { method: 'PUT', body: JSON.stringify({ currentPassword, newPassword }) });
+  if (result.success && getAuthToken() === token) {
+    setAuthToken(result.data.accessToken);
+    setRefreshToken(result.data.refreshToken);
+  }
+  return result;
 }
 
 export async function getMeApi() {
@@ -213,22 +251,6 @@ export async function updateScheduleSlotApi(id, slotData) {
 export async function deleteScheduleSlotApi(id) {
   return await request(`/schedule/${id}`, {
     method: 'DELETE',
-  });
-}
-
-export async function importScheduleImageApi(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  return await request('/schedule/import/image', {
-    method: 'POST',
-    body: formData,
-  });
-}
-
-export async function confirmScheduleImportApi(slots) {
-  return await request('/schedule/import/confirm', {
-    method: 'POST',
-    body: JSON.stringify({ slots }),
   });
 }
 
@@ -445,9 +467,10 @@ export async function getQuizByIdApi(quizId) {
 }
 
 export async function attemptQuizApi(quizId, userAnswers) {
+  const answers = Object.fromEntries(userAnswers.map(({ questionId, selectedOption }) => [questionId, selectedOption]));
   return await request(`/quizzes/${quizId}/attempt`, {
     method: 'POST',
-    body: JSON.stringify({ answers: userAnswers }),
+    body: JSON.stringify({ answers }),
   });
 }
 

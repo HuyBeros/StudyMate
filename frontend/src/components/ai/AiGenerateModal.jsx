@@ -3,7 +3,7 @@ import { X, Sparkles, Brain, CheckSquare, FileSearch } from 'lucide-react';
 
 export default function AiGenerateModal({ isOpen, onClose, type, docId, onGenerate }) {
   const [config, setConfig] = useState({
-    numberOfQuestions: 10,
+    numberOfQuestions: 5,
     difficulty: 'Trung bình',
     focusAreas: '',
     language: 'Tiếng Việt'
@@ -54,7 +54,7 @@ export default function AiGenerateModal({ isOpen, onClose, type, docId, onGenera
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Số lượng câu hỏi</label>
               <div className="flex gap-3">
-                {[5, 10, 20, 30].map(num => (
+                {[5, 10, 20].map(num => (
                   <button
                     key={num}
                     type="button"

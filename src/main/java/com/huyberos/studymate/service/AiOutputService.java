@@ -8,8 +8,10 @@ import com.huyberos.studymate.dto.response.QuizResponse;
 import com.huyberos.studymate.entity.*;
 import com.huyberos.studymate.entity.enums.CorrectOption;
 import com.huyberos.studymate.entity.enums.SourceType;
+import com.huyberos.studymate.exception.ResourceNotFoundException;
 import com.huyberos.studymate.repository.*;
 import com.huyberos.studymate.util.AiTextUtil;
+import com.huyberos.studymate.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,9 +32,19 @@ public class AiOutputService {
     private final SummaryRepository summaryRepository;
     private final DocumentRepository documentRepository;
     private final NoteRepository noteRepository;
+    private final SubjectRepository subjectRepository;
+    private final SecurityUtil securityUtil;
+
+    void requireOwnedSource(SourceType type, Long sourceId, Long userId) {
+        boolean owned = sourceId != null && (
+                (type == SourceType.DOCUMENT && documentRepository.findByIdAndUserId(sourceId, userId).isPresent())
+                || (type == SourceType.NOTE && noteRepository.findByIdAndUserId(sourceId, userId).isPresent()));
+        if (!owned) throw new ResourceNotFoundException("Không tìm thấy nguồn nội dung ôn tập.");
+    }
 
     @Transactional
     public QuizResponse saveQuiz(QuizSaveRequest request) {
+        requireOwnedSource(request.getSourceType(), request.getSourceId(), securityUtil.getCurrentUserId());
         Quiz quiz = Quiz.builder()
                 .sourceType(request.getSourceType())
                 .sourceId(request.getSourceId())
@@ -63,6 +75,7 @@ public class AiOutputService {
 
     @Transactional
     public MindmapResponse saveMindmap(MindmapSaveRequest request) {
+        requireOwnedSource(request.getSourceType(), request.getSourceId(), securityUtil.getCurrentUserId());
         Mindmap mindmap = Mindmap.builder()
                 .sourceType(request.getSourceType())
                 .sourceId(request.getSourceId())
@@ -75,6 +88,7 @@ public class AiOutputService {
 
     @Transactional
     public Summary saveSummary(SummarySaveRequest request) {
+        requireOwnedSource(request.getSourceType(), request.getSourceId(), securityUtil.getCurrentUserId());
         Summary summary = Summary.builder()
                 .sourceType(request.getSourceType())
                 .sourceId(request.getSourceId())
@@ -86,12 +100,11 @@ public class AiOutputService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getAllAiOutputsForSubject(Long subjectId) {
-        // Fetch all doc IDs and note IDs for this subject
-        List<Document> docs = documentRepository.findAll();
-        List<Long> docIds = docs.stream().filter(d -> d.getSubject().getId().equals(subjectId)).map(Document::getId).collect(Collectors.toList());
-
-        List<Note> notes = noteRepository.findAll();
-        List<Long> noteIds = notes.stream().filter(n -> n.getSubject().getId().equals(subjectId)).map(Note::getId).collect(Collectors.toList());
+        if (!subjectRepository.existsByIdAndUserId(subjectId, securityUtil.getCurrentUserId())) {
+            throw new ResourceNotFoundException("Không tìm thấy môn học.");
+        }
+        List<Long> docIds = documentRepository.findBySubjectIdOrderByUploadDateDesc(subjectId).stream().map(Document::getId).toList();
+        List<Long> noteIds = noteRepository.findBySubjectIdOrderByUpdatedAtDesc(subjectId).stream().map(Note::getId).toList();
 
         // Fetch Quizzes
         List<Quiz> quizzes = new ArrayList<>();

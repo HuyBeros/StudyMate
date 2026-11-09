@@ -1,11 +1,12 @@
 {
-  "appName": "EduFlow",
+  "appName": "StudyMate",
   "tagline": "Study smarter every day",
 
   "nav": {
     "dashboard": "Dashboard",
     "subjects": "Subjects",
     "schedule": "Schedule",
+    "studyRooms": "Study rooms",
     "aiTutor": "AI Tutor",
     "statistics": "Statistics",
     "profile": "Profile",
@@ -15,7 +16,7 @@
   },
 
   "header": {
-    "searchPlaceholder": "Search documents, lectures...",
+    "searchPlaceholder": "Search subjects, tasks, schedules…",
     "darkMode": "Dark Mode",
     "profile": "My Profile",
     "logout": "Log out",

@@ -35,6 +35,7 @@ public class AiService {
     private final QuizAttemptRepository quizAttemptRepository;
     private final MindmapRepository mindmapRepository;
     private final SecurityUtil securityUtil;
+    private final AiOutputService aiOutputService;
     private final ObjectMapper objectMapper;
 
     // ── Summarize ──────────────────────────────────────────
@@ -278,6 +279,7 @@ public class AiService {
         User currentUser = securityUtil.getCurrentUser();
         Quiz quiz = quizRepository.findByIdWithQuestions(quizId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found: " + quizId));
+        aiOutputService.requireOwnedSource(quiz.getSourceType(), quiz.getSourceId(), currentUser.getId());
 
         Map<Long, CorrectOption> userAnswers = request.getAnswers() != null ? request.getAnswers() : Map.of();
         List<QuizQuestion> questions = quiz.getQuestions();
@@ -317,6 +319,7 @@ public class AiService {
     public QuizResponse getQuizById(Long quizId) {
         Quiz quiz = quizRepository.findByIdWithQuestions(quizId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found: " + quizId));
+        aiOutputService.requireOwnedSource(quiz.getSourceType(), quiz.getSourceId(), securityUtil.getCurrentUserId());
 
         return QuizResponse.fromEntity(quiz, true);
     }
@@ -325,6 +328,7 @@ public class AiService {
     public MindmapResponse getMindmapById(Long mindmapId) {
         Mindmap mindmap = mindmapRepository.findById(mindmapId)
                 .orElseThrow(() -> new ResourceNotFoundException("Mindmap not found: " + mindmapId));
+        aiOutputService.requireOwnedSource(mindmap.getSourceType(), mindmap.getSourceId(), securityUtil.getCurrentUserId());
 
         return MindmapResponse.fromEntity(mindmap);
     }

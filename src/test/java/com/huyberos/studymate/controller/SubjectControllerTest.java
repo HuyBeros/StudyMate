@@ -39,13 +39,13 @@ class SubjectControllerTest {
 
         RegisterRequest regRequest = new RegisterRequest();
         regRequest.setEmail(email);
-        regRequest.setPassword("123456");
+        regRequest.setPassword("StudyTest123!");
         regRequest.setFullName("Subject Tester");
 
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(regRequest)))
-                .andReturn();
+                .andExpect(status().isCreated()).andReturn();
 
         String responseStr = result.getResponse().getContentAsString();
         token = objectMapper.readTree(responseStr).path("data").path("accessToken").asText();

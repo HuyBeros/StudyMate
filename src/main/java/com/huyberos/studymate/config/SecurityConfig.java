@@ -4,6 +4,7 @@ import com.huyberos.studymate.exception.JwtAuthenticationEntryPoint;
 import com.huyberos.studymate.security.UserDetailsServiceImpl;
 import com.huyberos.studymate.security.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,6 +34,9 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtAuthenticationEntryPoint authEntryPoint;
 
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     // ── Endpoints không cần auth ───────────────────────────
     private static final String[] PUBLIC_ENDPOINTS = {
             "/",
@@ -40,7 +44,13 @@ public class SecurityConfig {
             "/assets/**",
             "/uploads/**",
             "/favicon.ico",
-            "/api/auth/**",
+            "/favicon.svg",
+            "/api/auth/register",
+            "/api/auth/login",
+            "/api/auth/oauth2",
+            "/api/auth/google/config",
+            "/api/auth/refresh",
+            "/api/auth/logout",
             "/actuator/health",
             "/v3/api-docs/**",
             "/swagger-ui/**"
@@ -60,6 +70,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.GET, "/ws/study-room").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .anyRequest().authenticated()
             )
@@ -89,10 +100,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of(
+        config.setAllowedOrigins(List.of(
                 "http://localhost:5173",   // Vite dev server
                 "http://localhost:3000",
-                "${app.frontend.url}"
+                "http://127.0.0.1:5173",
+                frontendUrl
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

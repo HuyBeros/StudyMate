@@ -22,7 +22,6 @@ import statisticsEn from './locales/en/statistics.json';
 // ── Supported languages ────────────────────────────────────────────────────
 export const SUPPORTED_LANGUAGES = [
   { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'en', label: 'English',    flag: '🇬🇧' },
 ];
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -53,6 +52,8 @@ i18n
 
     ns: ['common', 'auth', 'dashboard', 'schedule', 'subjects', 'ai', 'statistics'],
     defaultNS: 'common',
+    lng: 'vi',
+    supportedLngs: ['vi'],
     fallbackLng: 'vi',
 
     detection: {

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * AI Router — điều phối request đến các AI provider theo thứ tự ưu tiên.
@@ -34,17 +35,24 @@ public class AiRouter {
      * Tạo nội dung text — tự động fallback qua các provider.
      */
     public String generateContent(String prompt, boolean forceJson) {
+        return tryGenerateContent(prompt, forceJson).orElseGet(() -> {
+            log.warn("[AI Router] All providers failed. Using offline fallback.");
+            return fallback.generateContent(prompt, forceJson);
+        });
+    }
+
+    public Optional<String> tryGenerateContent(String prompt, boolean forceJson) {
         for (AiProvider provider : providers) {
             if (!provider.isAvailable()) continue;
             try {
                 log.info("[AI Router] Trying {}...", provider.getName());
-                return provider.generateContent(prompt, forceJson);
+                String result = provider.generateContent(prompt, forceJson);
+                if (result != null && !result.isBlank()) return Optional.of(result);
             } catch (Exception e) {
                 log.warn("[AI Router] {} failed: {}. Falling back...", provider.getName(), e.getMessage());
             }
         }
-        log.warn("[AI Router] All providers failed. Using offline fallback.");
-        return fallback.generateContent(prompt, forceJson);
+        return Optional.empty();
     }
 
     /**

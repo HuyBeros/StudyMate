@@ -10,6 +10,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -78,5 +82,47 @@ public class FileStorageService {
 
     public Path getRootLocation() {
         return rootLocation;
+    }
+
+    public String storeAvatar(MultipartFile file) {
+        if (file.isEmpty() || file.getSize() > 2 * 1024 * 1024) {
+            throw new BadRequestException("Ảnh phải có dung lượng tối đa 2 MB.");
+        }
+        try (var input = file.getInputStream(); var imageStream = ImageIO.createImageInputStream(input)) {
+            if (imageStream == null) throw new BadRequestException("Không đọc được ảnh.");
+            var readers = ImageIO.getImageReaders(imageStream);
+            if (!readers.hasNext()) throw new BadRequestException("Hãy chọn ảnh JPG hoặc PNG.");
+            var reader = readers.next();
+            try {
+                String format = reader.getFormatName();
+                if (!format.equalsIgnoreCase("jpeg") && !format.equalsIgnoreCase("png")) {
+                    throw new BadRequestException("Hãy chọn ảnh JPG hoặc PNG.");
+                }
+                reader.setInput(imageStream, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width < 1 || height < 1 || width > 4096 || height > 4096) {
+                    throw new BadRequestException("Kích thước ảnh tối đa là 4096 × 4096 pixel.");
+                }
+                double scale = Math.min(1, 512.0 / Math.max(width, height));
+                var avatar = new BufferedImage(Math.max(1, (int) (width * scale)),
+                        Math.max(1, (int) (height * scale)), BufferedImage.TYPE_INT_ARGB);
+                Graphics2D graphics = avatar.createGraphics();
+                try {
+                    graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    graphics.drawImage(reader.read(0), 0, 0, avatar.getWidth(), avatar.getHeight(), null);
+                } finally {
+                    graphics.dispose();
+                }
+                String filename = UUID.randomUUID() + ".png";
+                Path directory = Files.createDirectories(rootLocation.resolve("avatars"));
+                ImageIO.write(avatar, "png", directory.resolve(filename).toFile());
+                return "/uploads/avatars/" + filename;
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException ex) {
+            throw new BadRequestException("Không đọc hoặc lưu được ảnh. Hãy thử một ảnh JPG hoặc PNG khác.");
+        }
     }
 }
