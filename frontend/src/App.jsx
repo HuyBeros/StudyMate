@@ -36,6 +36,7 @@ import {
 import * as api from './services/api';
 
 const defaultTimerMinutes = { focus: 25, short: 5, long: 15 };
+const emptyList = [];
 
 function loadTimerMinutes() {
   try {
@@ -80,12 +81,15 @@ export default function App() {
   }, [timerMinutes]);
 
   // Real API state
-  const [subjects, setSubjects] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const [loadedSubjects, setSubjects] = useState(null);
+  const [loadedTasks, setTasks] = useState(null);
+  const subjects = loadedSubjects ?? emptyList;
+  const tasks = loadedTasks ?? emptyList;
   const [schedule, setSchedule] = useState([]);
   const [todayData, setTodayData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [weeklyStats, setWeeklyStats] = useState(null);
+  const accountId = user?.id;
   const study = useStudyData(user);
   const refreshStudy = study.refresh;
   const preferences = study.data ? { ...study.data.preferences, weeklyGoal: study.data.preferences.weeklyGoalSeconds / 3600 } : null;
@@ -114,7 +118,7 @@ export default function App() {
 
   useEffect(() => {
     const clear = () => {
-      setUser(null); setTasks([]); setSubjects([]); setSchedule([]); setTodayData(null); setWeeklyStats(null);
+      setUser(null); setTasks(null); setSubjects(null); setSchedule([]); setTodayData(null); setWeeklyStats(null);
       setAssistantOwner(null); setScheduleDate(null);
       loadSequence.current++; setLoading(false); setNotice(''); setIsAuthModalOpen(true);
     };
@@ -152,24 +156,22 @@ export default function App() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // 1. Fetch Real Backend Data
-  const loadData = useCallback(async () => {
+  const loadBaseData = useCallback(async () => {
     const sequence = ++loadSequence.current;
     const token = getAuthToken();
     if (!token) return;
     setLoading(true);
     setDataError('');
     try {
-      const [todayRes, subjectsRes, tasksRes, scheduleRes, statsRes] = await Promise.all([
+      const [todayRes, subjectsRes, tasksRes, scheduleRes] = await Promise.all([
         getTodayDashboardApi(),
         getSubjectsApi(),
         getTasksApi(),
-        getScheduleApi(),
-        getWeeklyStatsApi(),
-        refreshStudy()
+        getScheduleApi()
       ]);
 
       if (sequence !== loadSequence.current || token !== getAuthToken()) return;
-      if ([todayRes, subjectsRes, tasksRes, scheduleRes, statsRes].some(res => !res?.success)) setDataError('Không tải được một phần dữ liệu. Hãy thử tải lại.');
+      if ([todayRes, subjectsRes, tasksRes, scheduleRes].some(res => !res?.success)) setDataError('Không tải được một phần dữ liệu. Hãy thử tải lại.');
 
       if (todayRes && todayRes.success) {
         setTodayData(todayRes.data);
@@ -187,22 +189,32 @@ export default function App() {
         setSchedule(scheduleRes.data);
       }
 
-      if (statsRes && statsRes.success) {
-        setWeeklyStats(statsRes.data);
-      }
-
     } catch {
-      setDataError("Không tải được dữ liệu. Hãy kiểm tra kết nối và thử lại.");
+      if (sequence === loadSequence.current && token === getAuthToken()) {
+        setDataError("Không tải được dữ liệu. Hãy kiểm tra kết nối và thử lại.");
+      }
     } finally {
       if (sequence === loadSequence.current) setLoading(false);
     }
-  }, [refreshStudy]);
+  }, []);
+
+  const loadData = useCallback(() => Promise.all([loadBaseData(), refreshStudy()]), [loadBaseData, refreshStudy]);
 
   useEffect(() => {
-    if (getAuthToken()) {
-      loadData();
-    }
-  }, [loadData]);
+    if (accountId != null) loadBaseData();
+  }, [accountId, loadBaseData]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (activeTab !== 'statistics' || accountId == null || !token) return;
+    let cancelled = false;
+    getWeeklyStatsApi().then(result => {
+      if (!cancelled && token === getAuthToken()) {
+        setWeeklyStats(result.success ? result.data : { unavailable: true });
+      }
+    });
+    return () => { cancelled = true; };
+  }, [activeTab, accountId]);
 
   // Handlers for Subject Edit & Delete
   const handleOpenNewSubject = () => {
@@ -282,7 +294,10 @@ export default function App() {
     };
     setUser(newUserObj);
     setStoredUser(newUserObj);
-    loadData();
+    if (user && newUserObj.id === accountId) {
+      if (newUserObj.email === user.email) loadData();
+      else loadBaseData();
+    }
   };
 
   const handleLogout = async () => {
@@ -290,7 +305,7 @@ export default function App() {
     await logoutApi();
     setUser(null);
     setAssistantOwner(null); setScheduleDate(null);
-    setTasks([]); setSubjects([]); setSchedule([]); setTodayData(null); setWeeklyStats(null); setLoading(false); setNotice('');
+    setTasks(null); setSubjects(null); setSchedule([]); setTodayData(null); setWeeklyStats(null); setLoading(false); setNotice('');
     setIsAuthModalOpen(true);
   };
 
@@ -351,11 +366,12 @@ export default function App() {
           {dataError && <div role="alert" className="mx-4 mt-4 p-4 rounded-xl bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200 flex flex-wrap gap-3 items-center">{dataError}<button className="font-bold underline" onClick={loadData}>Tải lại</button></div>}
           {study.error && <div role="alert" className="mx-4 mt-4 p-4 rounded-xl bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-100 flex flex-wrap gap-3 items-center">{study.error}<button disabled={study.busy} className="font-bold underline" onClick={study.refresh}>Tải lại số liệu</button></div>}
           {study.pending && <div role="status" className="mx-4 mt-4 p-4 rounded-xl bg-blue-50 text-blue-900 flex flex-wrap gap-3 items-center">Một thao tác phiên học đang chờ xác nhận. Số liệu hiển thị là lần xác nhận gần nhất.<button disabled={study.busy} className="font-bold underline" onClick={study.retry}>Thử gửi lại</button></div>}
-          {user && !study.data && <p role="status" className="mx-4 mt-4 text-sm text-slate-600 dark:text-slate-300">{study.error ? 'Chưa có số liệu được xác nhận. Hãy tải lại khi có kết nối.' : 'Đang tải số liệu học tập từ tài khoản…'}</p>}
+          {user && !study.data && activeTab !== 'dashboard' && !study.error && <p role="status" className="mx-4 mt-4 text-sm text-slate-600 dark:text-slate-300">Đang tải số liệu học tập từ tài khoản…</p>}
           {notice && <div role="status" className="success-notice mx-4 mt-2 px-3 py-2 text-sm rounded-xl bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100 flex justify-between gap-4"><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Đóng thông báo" className="font-bold px-2">×</button></div>}
-          {study.data && <div hidden={activeTab !== 'dashboard'}>
+          <div hidden={activeTab !== 'dashboard'}>
             <DashboardView key={user?.id ?? 'guest'}
-              data={{ user, subjects, tasks, todayData, schedule }}
+              data={{ user, subjects, tasks }}
+              subjectsReady={!user || loadedSubjects != null} tasksReady={!user || loadedTasks != null} dataError={dataError}
               metrics={metrics} preferences={preferences} study={study} onLogin={openAuth}
               timerMinutes={timerMinutes}
               onNavigate={setActiveTab}
@@ -366,7 +382,7 @@ export default function App() {
               onTaskDelete={id => mutateTask(() => api.deleteTaskApi(id))}
               onSessionComplete={session => setNotice(`Đã lưu ${Math.floor(session.focusSeconds / 60)} phút ${session.focusSeconds % 60} giây tập trung vào tài khoản.`)}
             />
-          </div>}
+          </div>
 
           {activeTab === 'subjects' && (
             <SubjectsView 
@@ -445,7 +461,7 @@ export default function App() {
 
           {activeTab === 'statistics' && study.data && (
             <StatisticsView 
-              stats={weeklyStats}
+              stats={user ? weeklyStats : {}}
               metrics={metrics} preferences={preferences} filters={study.filters} onFilterChange={study.setFilters}
               subjects={subjects}
               tasks={tasks}

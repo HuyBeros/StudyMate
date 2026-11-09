@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { request, getAuthToken } from '../services/api';
 import { accountKey, beginCommand, sendCommand, readJson, pendingKey, deviceId, legacyBatch, acknowledgeLegacy, emptyOverview } from '../lib/studyClient';
 
+const defaultFilters = {};
+
 export default function useStudyData(user) {
   const account = accountKey(user);
   const currentAccount = useRef(account); currentAccount.current = account;
   const [stored, setStored] = useState(null);
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState(defaultFilters);
   const [error, setError] = useState('');
   const [importNotice, setImportNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,7 +29,7 @@ export default function useStudyData(user) {
     setError(''); setImportNotice(''); setBusy(false); mutex.current = false;
     // Never expose the previous account's snapshot while a new request is pending.
     setStored(null);
-    setFilters({});
+    setFilters(defaultFilters);
   }, [account]);
   useEffect(() => {
     refresh();

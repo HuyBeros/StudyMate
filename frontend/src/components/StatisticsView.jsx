@@ -89,7 +89,7 @@ export default function StatisticsView({ stats, subjects = [], metrics, preferen
       <h3 className="font-bold text-lg">Điểm trắc nghiệm trung bình</h3>
       {stats?.averageQuizScore != null
         ? <><p className="text-2xl font-bold mt-2">{stats.averageQuizScore}%</p><p className="text-sm text-slate-600 dark:text-slate-300 mt-2">Tính trên các lượt làm bài của toàn tài khoản.</p></>
-        : <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Chưa có điểm trắc nghiệm để hiển thị.</p>}
+        : <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{stats === null ? 'Đang tải điểm trắc nghiệm…' : stats?.unavailable ? 'Chưa tải được điểm trắc nghiệm.' : 'Chưa có điểm trắc nghiệm để hiển thị.'}</p>}
     </section>
   </div>;
 }

@@ -8,6 +8,8 @@ import com.huyberos.studymate.entity.enums.SubjectType;
 import com.huyberos.studymate.repository.UserRepository;
 import com.huyberos.studymate.repository.SubjectRepository;
 import com.huyberos.studymate.study.*;
+import jakarta.persistence.EntityManager;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,7 @@ class P1StudyIntegrationTest {
     @Autowired StudySessionRepository sessions;
     @Autowired TaskCompletionEventRepository events;
     @Autowired StudyMutationReceiptRepository receipts;
+    @Autowired EntityManager entityManager;
     @MockitoBean Clock clock;
     @Autowired org.springframework.web.context.WebApplicationContext context;
     @Autowired com.huyberos.studymate.security.jwt.JwtUtil jwt;
@@ -83,6 +86,32 @@ class P1StudyIntegrationTest {
         assertEquals(2,receipts.countByUserId(owner.getId()));
         mvc.perform(get("/api/study/metrics")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalFocusSeconds").value(1500)).andExpect(jsonPath("$.data.streak").value(1));
+    }
+
+    @Test void overviewLoadsSessionSegmentsWithoutOneQueryPerSession() throws Exception {
+        for (int i = 0; i < 6; i++) {
+            Instant sessionStart = start.plusSeconds(i * 1800L);
+            when(clock.instant()).thenReturn(sessionStart);
+            UUID id = UUID.randomUUID();
+            create(id, UUID.randomUUID(), 1500);
+            when(clock.instant()).thenReturn(sessionStart.plusSeconds(1500));
+            transition(id, UUID.randomUUID(), "COMPLETE", 0).andExpect(status().isOk());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        var statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        boolean wasEnabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+        try {
+            var segments = statistics.getCollectionStatistics(StudySession.class.getName() + ".segments");
+            long before = segments.getFetchCount();
+            mvc.perform(get("/api/study/overview")).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.metrics.totalFocusSeconds").value(9000));
+            assertEquals(before, segments.getFetchCount(), "Overview must fetch segments with their sessions");
+        } finally {
+            statistics.setStatisticsEnabled(wasEnabled);
+        }
     }
 
     @Test void pauseResumeExcludesBreakAndOldVersionCannotOverwrite() throws Exception {

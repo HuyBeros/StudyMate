@@ -42,15 +42,19 @@ public class StudyOverviewService {
             throw new BadRequestException("Chọn khoảng thời gian hợp lệ, tối đa 366 ngày và không trong tương lai.");
         if (subjectId != null) subjects.findByIdAndUserId(subjectId, user.getId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy môn học."));
         var allTasks = tasks.findAllByUserId(user.getId()); var allEvents = events.findByUserId(user.getId());
-        var allSessions = sessions.findByUserIdOrderByIdDesc(user.getId());
+        var allSessions = sessions.findWithSegmentsByUserIdOrderByIdDesc(user.getId());
         var engine = new StudyMetricsCalculator();
         var snapshot = calculate(engine, allTasks, allEvents, allSessions, zone, now);
         var todayTasks = allTasks.stream().filter(task -> task.getDueAt() != null ? task.getDueAt().toLocalDate().equals(today)
                 : task.getStatus() != TaskStatus.DONE || task.getCompletedAt() != null && task.getCompletedAt().atZone(accounts.legacyZone()).withZoneSameInstant(zone).toLocalDate().equals(today)).toList();
-        var subjectTasks = allTasks.stream().filter(task -> subjectId == null || task.getSubject() != null && subjectId.equals(task.getSubject().getId())).toList();
-        var selectedSessions = allSessions.stream().filter(session -> subjectId == null || subjectId.equals(session.getSubjectId())).toList();
-        var selectedEvents = allEvents.stream().filter(event -> subjectId == null || subjectId.equals(event.getSubjectId())).toList();
-        var selected = calculate(engine, subjectTasks, selectedEvents, selectedSessions, zone, now);
+        var subjectTasks = allTasks;
+        var selected = snapshot;
+        if (subjectId != null) {
+            subjectTasks = allTasks.stream().filter(task -> task.getSubject() != null && subjectId.equals(task.getSubject().getId())).toList();
+            var selectedSessions = allSessions.stream().filter(session -> subjectId.equals(session.getSubjectId())).toList();
+            var selectedEvents = allEvents.stream().filter(event -> subjectId.equals(event.getSubjectId())).toList();
+            selected = calculate(engine, subjectTasks, selectedEvents, selectedSessions, zone, now);
+        }
         final LocalDate first = from, last = to;
         var periodTasks = subjectTasks.stream().filter(task -> {
             var date = task.getCreatedAtInstant().atZone(zone).toLocalDate();
