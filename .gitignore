@@ -32,12 +32,22 @@ build/
 ### VS Code ###
 .vscode/
 
+### Local agent configuration ###
+/.agents/
+
+### Generated frontend bundle ###
+/src/main/resources/static/
+
 ### Environment & Secrets ###
 .env
+.env.*
+!.env.example
 .local-backups/
 *.env.local
+*.dump
 application-local.properties
 application-local.yml
 
 ### File Uploads ###
 uploads/
+/uploads-test/
